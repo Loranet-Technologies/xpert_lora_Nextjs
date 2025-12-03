@@ -24,7 +24,7 @@ import UserDashboard from "./pages/userDashaboard/page";
 import { LogOutIcon } from "lucide-react";
 
 export default function Home() {
-  const { isAuthenticated, isLoading, roles, logout, user } = useAuth();
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState("uplinks");
 
   // Show loading spinner while checking authentication
@@ -44,51 +44,40 @@ export default function Home() {
     return <LoginPage />;
   }
 
-  // Define tabs based on user roles
+  // Define all available tabs
   const allTabs = [
     {
       id: "uplinks",
       name: "Uplinks",
       icon: "📡",
-      roles: ["user_role", "admin_role"],
     },
     {
       id: "downlinks",
       name: "Downlinks",
       icon: "🔧",
-      roles: ["user_role", "admin_role"],
     },
     {
       id: "devices",
       name: "Devices",
       icon: "📱",
-      roles: ["user_role", "admin_role"],
     },
     {
       id: "applications",
       name: "Applications",
       icon: "📋",
-      roles: ["user_role", "admin_role"],
     },
     {
       id: "create",
       name: "Create Device",
       icon: "🔧",
-      roles: ["user_role", "admin_role"],
     },
     {
       id: "Userdashboard",
       name: "User Dashboard",
       icon: "👤",
-      roles: ["user_role", "admin_role"],
     },
-    { id: "Admin", name: "Admin", icon: "⚙️", roles: ["admin_role"] },
+    { id: "Admin", name: "Admin", icon: "⚙️" },
   ];
-
-  // Filter tabs based on user roles
-  const availableTabs = allTabs.filter((tab) =>
-    tab.roles.some((role) => roles.includes(role))
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,7 +90,7 @@ export default function Home() {
                 LoRaWAN Dashboard
               </h1>
               <div className="flex space-x-1">
-                {availableTabs.map((tab) => (
+                {allTabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
