@@ -115,9 +115,7 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{totalApplications}</div>
-                  <p className="text-xs text-muted-foreground">
-                    From ERPNext
-                  </p>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
                 </>
               )}
             </CardContent>
@@ -141,9 +139,7 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{totalDevices}</div>
-                  <p className="text-xs text-muted-foreground">
-                    From ERPNext
-                  </p>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
                 </>
               )}
             </CardContent>
@@ -167,9 +163,7 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{totalGateways}</div>
-                  <p className="text-xs text-muted-foreground">
-                    From ERPNext
-                  </p>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
                 </>
               )}
             </CardContent>
