@@ -4,13 +4,14 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import {
-  listOrganizations,
-  listCsApplications,
+  fetchERPNextTenants,
+  fetchERPNextApplications,
+  fetchERPNextDevices,
+  fetchERPNextDeviceProfiles,
   listCsDevices,
   createCsDevice,
   updateCsDevice,
   deleteCsDevice,
-  listCsDeviceProfiles,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,22 +57,68 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit, Trash2, Smartphone } from "lucide-react";
 
-type OrgItem = { id: string; name?: string };
-type AppItem = { id: string; name?: string };
-type DevItem = { id?: string; devEui?: string; name?: string } & Record<
-  string,
-  any
->;
-type ProfileItem = { id: string; name?: string };
+// ERPNext Tenant type
+type Tenant = {
+  name: string;
+  tenant_name: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Application type
+type Application = {
+  name: string;
+  application_name: string;
+  tenant: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Device Profile type
+type DeviceProfile = {
+  name: string;
+  profile_name: string;
+  tenant: string;
+} & Record<string, any>;
+
+// ERPNext Device type
+type Device = {
+  name: string;
+  owner: string;
+  creation: string;
+  modified: string;
+  modified_by: string;
+  docstatus: number;
+  idx: number;
+  device_name: string;
+  dev_eui: string;
+  application: string;
+  application_chirpstack_id?: string;
+  chirpstack_id?: string;
+  device_profile: string;
+  metadata?: any;
+  status?: string;
+  description?: string;
+} & Record<string, any>;
+
+// Helper function to format ERPNext date
+function formatERPNextDate(dateString?: string): string {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+  } catch {
+    return dateString;
+  }
+}
 
 export default function DevicesAdminPage() {
-  const [orgs, setOrgs] = useState<OrgItem[]>([]);
-  const [apps, setApps] = useState<AppItem[]>([]);
-  const [devices, setDevices] = useState<DevItem[]>([]);
-  const [profiles, setProfiles] = useState<ProfileItem[]>([]);
-  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [profiles, setProfiles] = useState<DeviceProfile[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
   const [selectedApp, setSelectedApp] = useState<string>("");
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -89,7 +136,7 @@ export default function DevicesAdminPage() {
 
   const [editDialog, setEditDialog] = useState<{
     open: boolean;
-    device: DevItem | null;
+    device: Device | null;
     name: string;
   }>({
     open: false,
@@ -99,44 +146,79 @@ export default function DevicesAdminPage() {
 
   const [deleteDialog, setDeleteDialog] = useState<{
     open: boolean;
-    device: DevItem | null;
+    device: Device | null;
   }>({
     open: false,
     device: null,
   });
 
-  async function loadOrgs() {
-    const res = await listOrganizations({ limit: 100 });
-    setOrgs((res as any).resultList || []);
-  }
-
-  async function loadApps(tenantId: string) {
-    const res = await listCsApplications({
-      organizationId: tenantId,
-      limit: 100,
-    });
-    setApps((res as any).resultList || []);
-  }
-
-  async function loadProfiles(tenantId: string) {
+  async function loadTenants() {
+    setLoading(true);
+    setError(null);
     try {
-      const res = await listCsDeviceProfiles({
-        tenantId: tenantId,
-        limit: 100,
+      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const data = (res as any).data || [];
+      setTenants(data as Tenant[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tenants");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadApps(tenantId?: string) {
+    if (!tenantId) {
+      setApps([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchERPNextApplications({
+        fields: ["*"],
+        tenant: tenantId,
       });
-      setProfiles((res as any).resultList || []);
+      const data = (res as any).data || [];
+      setApps(data as Application[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load applications");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadProfiles(tenantId?: string) {
+    if (!tenantId) {
+      setProfiles([]);
+      return;
+    }
+    try {
+      const res = await fetchERPNextDeviceProfiles({
+        fields: ["*"],
+        tenant: tenantId,
+      });
+      const data = (res as any).data || [];
+      setProfiles(data as DeviceProfile[]);
     } catch (e: any) {
       console.error("Failed to load device profiles:", e);
       setProfiles([]);
     }
   }
 
-  async function loadDevices(appId: string) {
+  async function loadDevices(appId?: string) {
+    if (!appId) {
+      setDevices([]);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await listCsDevices({ applicationId: appId, limit: 100 });
-      setDevices((res as any).resultList || []);
+      const res = await fetchERPNextDevices({
+        fields: ["*"],
+        application: appId,
+      });
+      const data = (res as any).data || [];
+      setDevices(data as Device[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load devices");
     } finally {
@@ -145,16 +227,23 @@ export default function DevicesAdminPage() {
   }
 
   useEffect(() => {
-    loadOrgs();
+    loadTenants();
   }, []);
   useEffect(() => {
-    if (selectedOrg) {
-      loadApps(selectedOrg);
-      loadProfiles(selectedOrg);
+    if (selectedTenant) {
+      loadApps(selectedTenant);
+      loadProfiles(selectedTenant);
+    } else {
+      setApps([]);
+      setProfiles([]);
     }
-  }, [selectedOrg]);
+  }, [selectedTenant]);
   useEffect(() => {
-    if (selectedApp) loadDevices(selectedApp);
+    if (selectedApp) {
+      loadDevices(selectedApp);
+    } else {
+      setDevices([]);
+    }
   }, [selectedApp]);
 
   async function onCreate(e: React.FormEvent) {
@@ -168,15 +257,18 @@ export default function DevicesAdminPage() {
     setError(null);
 
     try {
-      await createCsDevice({
-        name: form.name,
-        devEui: form.devEui,
-        applicationId: selectedApp,
-        deviceProfileId: selectedProfile,
-      });
-      setForm({ name: "", devEui: "" });
-      setSelectedProfile(""); // Reset profile selection
-      await loadDevices(selectedApp);
+      // Note: Creating devices in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the create endpoint
+      setError("Create functionality for ERPNext devices not yet implemented");
+      // await createCsDevice({
+      //   name: form.name,
+      //   devEui: form.devEui,
+      //   applicationId: selectedApp,
+      //   deviceProfileId: selectedProfile,
+      // });
+      // setForm({ name: "", devEui: "" });
+      // setSelectedProfile(""); // Reset profile selection
+      // await loadDevices(selectedApp);
     } catch (e: any) {
       console.error("Device creation error:", e);
 
@@ -198,14 +290,14 @@ export default function DevicesAdminPage() {
     if (!editDialog.device || !editDialog.name.trim()) return;
 
     try {
-      await updateCsDevice(
-        (editDialog.device.devEui || editDialog.device.id) as string,
-        {
-          name: editDialog.name,
-        }
-      );
-      await loadDevices(selectedApp);
-      setEditDialog({ open: false, device: null, name: "" });
+      // Note: Updating devices in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the update endpoint
+      setError("Update functionality for ERPNext devices not yet implemented");
+      // await updateCsDevice(editDialog.device.dev_eui || editDialog.device.name, {
+      //   name: editDialog.name,
+      // });
+      // await loadDevices(selectedApp);
+      // setEditDialog({ open: false, device: null, name: "" });
     } catch (e: any) {
       setError(e?.message || "Failed to update device");
     }
@@ -215,11 +307,12 @@ export default function DevicesAdminPage() {
     if (!deleteDialog.device) return;
 
     try {
-      await deleteCsDevice(
-        (deleteDialog.device.devEui || deleteDialog.device.id) as string
-      );
-      await loadDevices(selectedApp);
-      setDeleteDialog({ open: false, device: null });
+      // Note: Deleting devices in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the delete endpoint
+      setError("Delete functionality for ERPNext devices not yet implemented");
+      // await deleteCsDevice(deleteDialog.device.dev_eui || deleteDialog.device.name);
+      // await loadDevices(selectedApp);
+      // setDeleteDialog({ open: false, device: null });
     } catch (e: any) {
       setError(e?.message || "Failed to delete device");
     }
@@ -235,7 +328,7 @@ export default function DevicesAdminPage() {
               Device Management
             </h1>
             <p className="text-muted-foreground">
-              Manage IoT devices across organizations and applications
+              Manage IoT devices from ERPNext
             </p>
           </div>
         </div>
@@ -244,28 +337,28 @@ export default function DevicesAdminPage() {
           <CardHeader>
             <CardTitle>Device Selection & Creation</CardTitle>
             <CardDescription>
-              Select an organization and application to view devices, or create
-              new ones
+              Select a tenant and application to view devices (Note: Create
+              functionality not yet implemented)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="org-select">Organization</Label>
+                <Label htmlFor="tenant-select">Tenant</Label>
                 <Select
-                  value={selectedOrg}
+                  value={selectedTenant}
                   onValueChange={(value) => {
-                    setSelectedOrg(value);
+                    setSelectedTenant(value);
                     setSelectedApp("");
                   }}
                 >
-                  <SelectTrigger id="org-select">
-                    <SelectValue placeholder="Select organization..." />
+                  <SelectTrigger id="tenant-select">
+                    <SelectValue placeholder="Select tenant..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {orgs.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.name || o.id}
+                    {tenants.map((t) => (
+                      <SelectItem key={t.name} value={t.name}>
+                        {t.tenant_name || t.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -277,15 +370,15 @@ export default function DevicesAdminPage() {
                 <Select
                   value={selectedApp}
                   onValueChange={setSelectedApp}
-                  disabled={!selectedOrg}
+                  disabled={!selectedTenant}
                 >
                   <SelectTrigger id="app-select">
                     <SelectValue placeholder="Select application..." />
                   </SelectTrigger>
                   <SelectContent>
                     {apps.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.name || a.id}
+                      <SelectItem key={a.name} value={a.name}>
+                        {a.application_name || a.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -298,15 +391,15 @@ export default function DevicesAdminPage() {
               <Select
                 value={selectedProfile}
                 onValueChange={setSelectedProfile}
-                disabled={!selectedOrg}
+                disabled={!selectedTenant}
               >
                 <SelectTrigger id="profile-select">
                   <SelectValue placeholder="Select device profile..." />
                 </SelectTrigger>
                 <SelectContent>
                   {profiles.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name || p.id}
+                    <SelectItem key={p.name} value={p.name}>
+                      {p.profile_name || p.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -372,7 +465,9 @@ export default function DevicesAdminPage() {
             <CardTitle>Devices</CardTitle>
             <CardDescription>
               {selectedApp
-                ? "Manage devices in the selected application"
+                ? `${devices.length} device${
+                    devices.length !== 1 ? "s" : ""
+                  } from ERPNext`
                 : "Select an application to view devices"}
             </CardDescription>
           </CardHeader>
@@ -387,8 +482,13 @@ export default function DevicesAdminPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Device Name</TableHead>
                       <TableHead>DevEUI</TableHead>
-                      <TableHead>Name</TableHead>
+                      <TableHead>ChirpStack ID</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -396,7 +496,7 @@ export default function DevicesAdminPage() {
                     {devices.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={8}
                           className="text-center py-8 text-muted-foreground"
                         >
                           {selectedApp
@@ -406,11 +506,36 @@ export default function DevicesAdminPage() {
                       </TableRow>
                     ) : (
                       devices.map((d) => (
-                        <TableRow key={(d.devEui || d.id) as string}>
+                        <TableRow key={d.name}>
                           <TableCell className="font-mono text-sm">
-                            {d.devEui || d.id}
+                            <Badge variant="outline">
+                              {d.name?.substring(0, 8)}...
+                            </Badge>
                           </TableCell>
-                          <TableCell>{d.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {d.device_name || "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {d.dev_eui || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {d.chirpstack_id || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                d.status === "Active" ? "default" : "secondary"
+                              }
+                            >
+                              {d.status || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {d.description || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatERPNextDate(d.creation)}
+                          </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
@@ -420,7 +545,7 @@ export default function DevicesAdminPage() {
                                   setEditDialog({
                                     open: true,
                                     device: d,
-                                    name: d.name || "",
+                                    name: d.device_name || "",
                                   })
                                 }
                               >
@@ -461,7 +586,8 @@ export default function DevicesAdminPage() {
               <DialogTitle>Rename Device</DialogTitle>
               <DialogDescription>
                 Update the name for device{" "}
-                {editDialog.device?.devEui || editDialog.device?.id}
+                {editDialog.device?.dev_eui || editDialog.device?.name} (Note:
+                Update functionality not yet implemented)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
@@ -473,6 +599,7 @@ export default function DevicesAdminPage() {
                   setEditDialog({ ...editDialog, name: e.target.value })
                 }
                 placeholder="Enter new device name..."
+                disabled
               />
             </div>
             <DialogFooter>
@@ -500,9 +627,10 @@ export default function DevicesAdminPage() {
               <AlertDialogTitle>Delete Device</AlertDialogTitle>
               <AlertDialogDescription>
                 Are you sure you want to delete device "
-                {deleteDialog.device?.name}" (
-                {deleteDialog.device?.devEui || deleteDialog.device?.id})? This
-                action cannot be undone.
+                {deleteDialog.device?.device_name || deleteDialog.device?.name}"
+                ({deleteDialog.device?.dev_eui || deleteDialog.device?.name})?
+                This action cannot be undone. (Note: Delete functionality not
+                yet implemented)
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

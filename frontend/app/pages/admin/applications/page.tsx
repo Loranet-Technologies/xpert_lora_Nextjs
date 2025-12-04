@@ -4,7 +4,8 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import {
-  listOrganizations,
+  fetchERPNextTenants,
+  fetchERPNextApplications,
   listCsApplications,
   createCsApplication,
   updateCsApplication,
@@ -55,33 +56,84 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit, Trash2, Building2, Zap } from "lucide-react";
 
-type OrgItem = { id: string; name?: string };
-type AppItem = { id: string; name?: string };
+// ERPNext Tenant type
+type Tenant = {
+  name: string;
+  tenant_name: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Application type
+type Application = {
+  name: string;
+  owner: string;
+  creation: string;
+  modified: string;
+  modified_by: string;
+  docstatus: number;
+  idx: number;
+  application_name: string;
+  tenant: string;
+  tenant_chirpstack_id?: string;
+  chirpstack_id?: string;
+  description?: string;
+  metadata?: any;
+  status?: string;
+} & Record<string, any>;
+
+// Helper function to format ERPNext date
+function formatERPNextDate(dateString?: string): string {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+  } catch {
+    return dateString;
+  }
+}
 
 export default function ApplicationsAdminPage() {
-  const [orgs, setOrgs] = useState<OrgItem[]>([]);
-  const [apps, setApps] = useState<AppItem[]>([]);
-  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
-  const [editingApp, setEditingApp] = useState<AppItem | null>(null);
+  const [editingApp, setEditingApp] = useState<Application | null>(null);
   const [editName, setEditName] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  async function loadOrgs() {
-    const res = await listOrganizations({ limit: 100 });
-    setOrgs((res as any).resultList || []);
-  }
-
-  async function loadApps(tenantId: string) {
+  async function loadTenants() {
     setLoading(true);
     setError(null);
     try {
-      const res = await listCsApplications({ organizationId: tenantId });
-      setApps((res as any).resultList || []);
+      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const data = (res as any).data || [];
+      setTenants(data as Tenant[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tenants");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadApps(tenantId?: string) {
+    if (!tenantId) {
+      setApps([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchERPNextApplications({
+        fields: ["*"],
+        tenant: tenantId,
+      });
+      const data = (res as any).data || [];
+      setApps(data as Application[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load applications");
     } finally {
@@ -90,47 +142,66 @@ export default function ApplicationsAdminPage() {
   }
 
   useEffect(() => {
-    loadOrgs();
+    loadTenants();
   }, []);
 
   useEffect(() => {
-    if (selectedOrg) loadApps(selectedOrg);
-  }, [selectedOrg]);
+    if (selectedTenant) {
+      loadApps(selectedTenant);
+    } else {
+      setApps([]);
+    }
+  }, [selectedTenant]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedOrg) return;
+    if (!selectedTenant) return;
     try {
-      await createCsApplication({ name: newName, organizationId: selectedOrg });
-      setNewName("");
-      await loadApps(selectedOrg);
+      // Note: Creating applications in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the create endpoint
+      setError(
+        "Create functionality for ERPNext applications not yet implemented"
+      );
+      // await createCsApplication({ name: newName, organizationId: selectedTenant });
+      // setNewName("");
+      // await loadApps(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to create application");
     }
   }
 
-  function handleEdit(app: AppItem) {
+  function handleEdit(app: Application) {
     setEditingApp(app);
-    setEditName(app.name || "");
+    setEditName(app.application_name || "");
     setIsEditDialogOpen(true);
   }
 
   async function handleSaveEdit() {
     if (!editingApp) return;
     try {
-      await updateCsApplication(editingApp.id, { name: editName });
-      await loadApps(selectedOrg);
-      setIsEditDialogOpen(false);
-      setEditingApp(null);
+      // Note: Updating applications in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the update endpoint
+      setError(
+        "Update functionality for ERPNext applications not yet implemented"
+      );
+      // await updateCsApplication(editingApp.name, { name: editName });
+      // await loadApps(selectedTenant);
+      // setIsEditDialogOpen(false);
+      // setEditingApp(null);
     } catch (e: any) {
       setError(e?.message || "Failed to update application");
     }
   }
 
-  async function handleDelete(app: AppItem) {
+  async function handleDelete(app: Application) {
     try {
-      await deleteCsApplication(app.id);
-      await loadApps(selectedOrg);
+      // Note: Deleting applications in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the delete endpoint
+      setError(
+        "Delete functionality for ERPNext applications not yet implemented"
+      );
+      // await deleteCsApplication(app.name);
+      // await loadApps(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to delete application");
     }
@@ -146,7 +217,7 @@ export default function ApplicationsAdminPage() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
             <p className="text-muted-foreground">
-              Manage applications within your organizations
+              Manage applications from ERPNext
             </p>
           </div>
         </div>
@@ -158,28 +229,29 @@ export default function ApplicationsAdminPage() {
               Create New Application
             </CardTitle>
             <CardDescription>
-              Select an organization and create a new application
+              Note: Create functionality for ERPNext applications not yet
+              implemented
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
-                <Label htmlFor="organization-select" className="mb-2 ">
-                  Organization
+                <Label htmlFor="tenant-select" className="mb-2 ">
+                  Tenant
                 </Label>
-                <Select value={selectedOrg} onValueChange={setSelectedOrg}>
-                  <SelectTrigger
-                    id="organization-select"
-                    className="min-w-[260px]"
-                  >
-                    <SelectValue placeholder="Select organization..." />
+                <Select
+                  value={selectedTenant}
+                  onValueChange={setSelectedTenant}
+                >
+                  <SelectTrigger id="tenant-select" className="min-w-[260px]">
+                    <SelectValue placeholder="Select tenant..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {orgs.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
+                    {tenants.map((t) => (
+                      <SelectItem key={t.name} value={t.name}>
                         <div className="flex items-center gap-2">
                           <Building2 className="w-4 h-4" />
-                          {o.name || o.id}
+                          {t.tenant_name || t.name}
                         </div>
                       </SelectItem>
                     ))}
@@ -205,7 +277,7 @@ export default function ApplicationsAdminPage() {
                 <div className="flex items-end">
                   <Button
                     type="submit"
-                    disabled={!selectedOrg}
+                    disabled={!selectedTenant}
                     className="w-full sm:w-auto"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -227,9 +299,11 @@ export default function ApplicationsAdminPage() {
           <CardHeader>
             <CardTitle>Applications</CardTitle>
             <CardDescription>
-              {selectedOrg
-                ? "Applications in the selected organization"
-                : "Select an organization to view applications"}
+              {selectedTenant
+                ? `${apps.length} application${
+                    apps.length !== 1 ? "s" : ""
+                  } from ERPNext`
+                : "Select a tenant to view applications"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -244,7 +318,11 @@ export default function ApplicationsAdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
+                      <TableHead>Application Name</TableHead>
+                      <TableHead>ChirpStack ID</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -252,29 +330,51 @@ export default function ApplicationsAdminPage() {
                     {apps.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={3}
+                          colSpan={7}
                           className="text-center py-8 text-muted-foreground"
                         >
-                          {selectedOrg
+                          {selectedTenant
                             ? "No applications found"
-                            : "Select an organization to view applications"}
+                            : "Select a tenant to view applications"}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      apps.map((a) => (
-                        <TableRow key={a.id}>
+                      apps.map((app) => (
+                        <TableRow key={app.name}>
                           <TableCell className="font-mono text-sm">
-                            {a.id}
+                            <Badge variant="outline">
+                              {app.name?.substring(0, 8)}...
+                            </Badge>
                           </TableCell>
                           <TableCell className="font-medium">
-                            {a.name}
+                            {app.application_name || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {app.chirpstack_id || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {app.description || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                app.status === "Active"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {app.status || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatERPNextDate(app.creation)}
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleEdit(a)}
+                                onClick={() => handleEdit(app)}
                               >
                                 <Edit className="w-4 h-4 mr-1" />
                                 Edit
@@ -292,8 +392,9 @@ export default function ApplicationsAdminPage() {
                                       Delete Application
                                     </AlertDialogTitle>
                                     <AlertDialogDescription>
-                                      Are you sure you want to delete "{a.name}
-                                      "? This action cannot be undone.
+                                      Are you sure you want to delete "
+                                      {app.application_name || app.name}"? This
+                                      action cannot be undone.
                                     </AlertDialogDescription>
                                   </AlertDialogHeader>
                                   <AlertDialogFooter>
@@ -301,7 +402,7 @@ export default function ApplicationsAdminPage() {
                                       Cancel
                                     </AlertDialogCancel>
                                     <AlertDialogAction
-                                      onClick={() => handleDelete(a)}
+                                      onClick={() => handleDelete(app)}
                                     >
                                       Delete
                                     </AlertDialogAction>
@@ -325,7 +426,8 @@ export default function ApplicationsAdminPage() {
             <DialogHeader>
               <DialogTitle>Edit Application</DialogTitle>
               <DialogDescription>
-                Update the name of the application
+                Update the name of the application (Note: Update functionality
+                not yet implemented)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -336,6 +438,7 @@ export default function ApplicationsAdminPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Enter application name"
+                  disabled
                 />
               </div>
             </div>

@@ -4,10 +4,7 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import {
-  listOrganizations,
-  createOrganization,
-  updateOrganization,
-  deleteOrganization,
+  fetchERPNextGateways,
   fetchERPNextTenants,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
@@ -28,9 +25,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Plus, Edit2, Trash2, Building2 } from "lucide-react";
+import { Loader2, Plus, Edit2, Trash2, Radio } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,18 +47,33 @@ import {
 // ERPNext Tenant type
 type Tenant = {
   name: string;
+  tenant_name: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Gateway type
+type Gateway = {
+  name: string;
   owner: string;
   creation: string;
   modified: string;
   modified_by: string;
   docstatus: number;
   idx: number;
-  tenant_name: string;
+  gateway_name: string;
+  gateway_id_mac?: string;
   chirpstack_id?: string;
+  tenant?: string;
   description?: string;
-  can_have_gateways?: number;
-  max_gateway_count?: number;
-  max_device_count?: number;
+  location?: string;
+  latitude?: number;
+  longitude?: number;
+  altitude_meters?: number;
+  network_settings?: string;
+  network_server_id?: string;
+  stats_interval_seconds?: number;
+  status?: string;
+  metadata?: any;
 } & Record<string, any>;
 
 // Helper function to format ERPNext date
@@ -68,78 +87,108 @@ function formatERPNextDate(dateString?: string): string {
   }
 }
 
-export default function OrganizationsAdminPage() {
-  const [items, setItems] = useState<Tenant[]>([]);
+// Helper function to format coordinates
+function formatCoordinates(lat?: number, lon?: number): string {
+  if (lat === undefined || lon === undefined || lat === 0 || lon === 0) {
+    return "—";
+  }
+  return `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+}
+
+export default function GatewayAdminPage() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [items, setItems] = useState<Gateway[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("all");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
-  const [editingOrg, setEditingOrg] = useState<Tenant | null>(null);
+  const [editingGateway, setEditingGateway] = useState<Gateway | null>(null);
   const [editName, setEditName] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
+  async function loadTenants() {
+    try {
+      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const data = (res as any).data || [];
+      setTenants(data as Tenant[]);
+    } catch (e: any) {
+      console.error("Failed to load tenants:", e);
+    }
+  }
 
   async function reload() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const res = await fetchERPNextGateways({
+        fields: ["*"],
+        tenant:
+          selectedTenant && selectedTenant !== "all"
+            ? selectedTenant
+            : undefined,
+      });
       // ERPNext returns { data: [...] }
       const data = (res as any).data || [];
-      setItems(data as Tenant[]);
+      setItems(data as Gateway[]);
     } catch (e: any) {
-      setError(e?.message || "Failed to load organizations");
+      setError(e?.message || "Failed to load gateways");
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    reload();
+    loadTenants();
   }, []);
+
+  useEffect(() => {
+    reload();
+  }, [selectedTenant]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     try {
-      // Note: Creating tenants in ERPNext would require a different API endpoint
+      // Note: Creating gateways in ERPNext would require a different API endpoint
       // For now, we'll show an error or you can implement the create endpoint
-      setError("Create functionality for ERPNext tenants not yet implemented");
-      // await createOrganization({ name: newName });
+      setError("Create functionality for ERPNext gateways not yet implemented");
+      // await createGateway({ name: newName });
       // setNewName("");
       // await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to create organization");
+      setError(e?.message || "Failed to create gateway");
     }
   }
 
   async function onUpdate(id: string, updates: { name?: string }) {
     try {
-      // Note: Updating tenants in ERPNext would require a different API endpoint
+      // Note: Updating gateways in ERPNext would require a different API endpoint
       // For now, we'll show an error or you can implement the update endpoint
-      setError("Update functionality for ERPNext tenants not yet implemented");
-      // await updateOrganization(id, updates);
+      setError("Update functionality for ERPNext gateways not yet implemented");
+      // await updateGateway(id, updates);
       // setIsEditDialogOpen(false);
-      // setEditingOrg(null);
+      // setEditingGateway(null);
       // await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to update organization");
+      setError(e?.message || "Failed to update gateway");
     }
   }
 
-  function openEditDialog(org: Tenant) {
-    setEditingOrg(org);
-    setEditName(org.tenant_name || "");
+  function openEditDialog(gateway: Gateway) {
+    setEditingGateway(gateway);
+    setEditName(gateway.gateway_name || "");
     setIsEditDialogOpen(true);
   }
 
   async function onDelete(id: string) {
-    if (!confirm("Delete organization?")) return;
+    if (!confirm("Delete gateway?")) return;
     try {
-      // Note: Deleting tenants in ERPNext would require a different API endpoint
+      // Note: Deleting gateways in ERPNext would require a different API endpoint
       // For now, we'll show an error or you can implement the delete endpoint
-      setError("Delete functionality for ERPNext tenants not yet implemented");
-      // await deleteOrganization(id);
+      setError("Delete functionality for ERPNext gateways not yet implemented");
+      // await deleteGateway(id);
       // await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to delete organization");
+      setError(e?.message || "Failed to delete gateway");
     }
   }
 
@@ -148,13 +197,13 @@ export default function OrganizationsAdminPage() {
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-6 w-6" />
+            <Radio className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Organizations (Tenants)
-            </h1>
-            <p className="text-muted-foreground">Manage tenants from ERPNext</p>
+            <h1 className="text-3xl font-bold tracking-tight">Gateways</h1>
+            <p className="text-muted-foreground">
+              Manage gateways from ERPNext
+            </p>
           </div>
         </div>
 
@@ -162,32 +211,57 @@ export default function OrganizationsAdminPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Plus className="h-5 w-5" />
-              Create New Tenant
+              Create New Gateway
             </CardTitle>
             <CardDescription>
-              Note: Create functionality for ERPNext tenants not yet implemented
+              Note: Create functionality for ERPNext gateways not yet
+              implemented
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form
-              onSubmit={onCreate}
-              className="flex flex-col gap-4 sm:flex-row sm:items-end"
-            >
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="name">Tenant Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter tenant name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  required
-                />
+            <div className="space-y-4">
+              <div className="flex-1">
+                <Label htmlFor="tenant-select" className="mb-2">
+                  Filter by Tenant (Optional)
+                </Label>
+                <Select
+                  value={selectedTenant}
+                  onValueChange={setSelectedTenant}
+                >
+                  <SelectTrigger id="tenant-select" className="min-w-[260px]">
+                    <SelectValue placeholder="All tenants..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Tenants</SelectItem>
+                    {tenants.map((t) => (
+                      <SelectItem key={t.name} value={t.name}>
+                        {t.tenant_name || t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <Button type="submit" className="sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Tenant
-              </Button>
-            </form>
+              <form
+                onSubmit={onCreate}
+                className="flex flex-col gap-4 sm:flex-row sm:items-end"
+              >
+                <div className="flex-1 space-y-2">
+                  <Label htmlFor="name">Gateway Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Enter gateway name"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    required
+                    disabled
+                  />
+                </div>
+                <Button type="submit" className="sm:w-auto" disabled>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Gateway
+                </Button>
+              </form>
+            </div>
           </CardContent>
         </Card>
 
@@ -199,16 +273,19 @@ export default function OrganizationsAdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Organizations List</CardTitle>
+            <CardTitle>Gateways List</CardTitle>
             <CardDescription>
-              {items.length} tenant{items.length !== 1 ? "s" : ""} from ERPNext
+              {items.length} gateway{items.length !== 1 ? "s" : ""} from ERPNext
+              {selectedTenant &&
+                selectedTenant !== "all" &&
+                ` (filtered by tenant)`}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2">Loading organizations...</span>
+                <span className="ml-2">Loading gateways...</span>
               </div>
             ) : (
               <div className="rounded-md border">
@@ -216,68 +293,69 @@ export default function OrganizationsAdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>Tenant Name</TableHead>
+                      <TableHead>Gateway Name</TableHead>
+                      <TableHead>Gateway ID/MAC</TableHead>
                       <TableHead>ChirpStack ID</TableHead>
-                      <TableHead>Description</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Coordinates</TableHead>
                       <TableHead>Created</TableHead>
-                      <TableHead>Gateways</TableHead>
-                      <TableHead>Max Gateways</TableHead>
-                      <TableHead>Max Devices</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((tenant) => (
-                      <TableRow key={tenant.name}>
+                    {items.map((gateway) => (
+                      <TableRow key={gateway.name}>
                         <TableCell className="font-mono text-sm">
                           <Badge variant="outline">
-                            {tenant.name?.substring(0, 8)}...
+                            {gateway.name?.substring(0, 8)}...
                           </Badge>
                         </TableCell>
                         <TableCell className="font-medium">
-                          {tenant.tenant_name || "—"}
+                          {gateway.gateway_name || "—"}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {gateway.gateway_id_mac || "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
-                          {tenant.chirpstack_id || "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {tenant.description || "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatERPNextDate(tenant.creation)}
+                          {gateway.chirpstack_id || "—"}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              tenant.can_have_gateways === 1
+                              gateway.status === "Active"
                                 ? "default"
                                 : "secondary"
                             }
                           >
-                            {tenant.can_have_gateways === 1
-                              ? "Enabled"
-                              : "Disabled"}
+                            {gateway.status || "—"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {tenant.max_gateway_count || "—"}
+                        <TableCell className="text-muted-foreground text-sm">
+                          {gateway.location || "—"}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {tenant.max_device_count || "—"}
+                        <TableCell className="text-muted-foreground text-sm font-mono">
+                          {formatCoordinates(
+                            gateway.latitude,
+                            gateway.longitude
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {formatERPNextDate(gateway.creation)}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => openEditDialog(tenant)}
+                              onClick={() => openEditDialog(gateway)}
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="destructive"
                               size="sm"
-                              onClick={() => onDelete(tenant.name)}
+                              onClick={() => onDelete(gateway.name)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -291,7 +369,7 @@ export default function OrganizationsAdminPage() {
                           colSpan={9}
                           className="text-center py-8 text-muted-foreground"
                         >
-                          No tenants found. Data is loaded from ERPNext.
+                          No gateways found. Data is loaded from ERPNext.
                         </TableCell>
                       </TableRow>
                     )}
@@ -305,19 +383,21 @@ export default function OrganizationsAdminPage() {
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Edit Organization</DialogTitle>
+              <DialogTitle>Edit Gateway</DialogTitle>
               <DialogDescription>
-                Update the organization details below.
+                Update the gateway details below. (Note: Update functionality
+                not yet implemented)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Organization Name</Label>
+                <Label htmlFor="edit-name">Gateway Name</Label>
                 <Input
                   id="edit-name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Enter organization name"
+                  placeholder="Enter gateway name"
+                  disabled
                 />
               </div>
             </div>
@@ -330,11 +410,12 @@ export default function OrganizationsAdminPage() {
               </Button>
               <Button
                 onClick={() =>
-                  editingOrg &&
-                  onUpdate(editingOrg.id, {
+                  editingGateway &&
+                  onUpdate(editingGateway.name, {
                     name: editName,
                   })
                 }
+                disabled
               >
                 Save Changes
               </Button>
