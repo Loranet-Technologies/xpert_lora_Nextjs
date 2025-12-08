@@ -385,13 +385,361 @@ export async function loginWithERPNext(credentials: {
       const errorData = await response.json().catch(() => ({
         message: "Login failed",
       }));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
     console.error("Failed to login with ERPNext:", error);
+    throw error;
+  }
+}
+
+// ERPNext Tenant API - Fetch tenants from ERPNext
+export async function fetchERPNextTenants(params?: { fields?: string[] }) {
+  try {
+    // Use Next.js API route as proxy to avoid CORS issues
+    const fields = params?.fields || ["*"];
+    const fieldsParam = JSON.stringify(fields);
+
+    // Get ERPNext token from localStorage or cookies
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("erpnext_token");
+      if (!token) {
+        // Try to get from cookies
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "erpnext_token") {
+            token = value;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(
+      `/api/erpnext/tenant?fields=${encodeURIComponent(fieldsParam)}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch tenants",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch ERPNext tenants:", error);
+    throw error;
+  }
+}
+
+// ERPNext Application API - Fetch applications from ERPNext
+export async function fetchERPNextApplications(params?: {
+  fields?: string[];
+  filters?: string;
+  tenant?: string;
+}) {
+  try {
+    // Use Next.js API route as proxy to avoid CORS issues
+    const fields = params?.fields || ["*"];
+    const fieldsParam = JSON.stringify(fields);
+
+    // Get ERPNext token from localStorage or cookies
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("erpnext_token");
+      if (!token) {
+        // Try to get from cookies
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "erpnext_token") {
+            token = value;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Build query parameters
+    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    if (params?.tenant) {
+      // Filter by tenant if provided
+      const filters = JSON.stringify([["tenant", "=", params.tenant]]);
+      queryParams += `&filters=${encodeURIComponent(filters)}`;
+    } else if (params?.filters) {
+      queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(`/api/erpnext/application?${queryParams}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch applications",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch ERPNext applications:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device Profile API - Fetch device profiles from ERPNext
+export async function fetchERPNextDeviceProfiles(params?: {
+  fields?: string[];
+  filters?: string;
+  tenant?: string;
+}) {
+  try {
+    // Use Next.js API route as proxy to avoid CORS issues
+    const fields = params?.fields || ["*"];
+    const fieldsParam = JSON.stringify(fields);
+
+    // Get ERPNext token from localStorage or cookies
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("erpnext_token");
+      if (!token) {
+        // Try to get from cookies
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "erpnext_token") {
+            token = value;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Build query parameters
+    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    if (params?.tenant) {
+      // Filter by tenant if provided
+      const filters = JSON.stringify([["tenant", "=", params.tenant]]);
+      queryParams += `&filters=${encodeURIComponent(filters)}`;
+    } else if (params?.filters) {
+      queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(`/api/erpnext/device-profile?${queryParams}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch device profiles",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch ERPNext device profiles:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device API - Fetch devices from ERPNext
+export async function fetchERPNextDevices(params?: {
+  fields?: string[];
+  filters?: string;
+  application?: string;
+}) {
+  try {
+    // Use Next.js API route as proxy to avoid CORS issues
+    const fields = params?.fields || ["*"];
+    const fieldsParam = JSON.stringify(fields);
+
+    // Get ERPNext token from localStorage or cookies
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("erpnext_token");
+      if (!token) {
+        // Try to get from cookies
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "erpnext_token") {
+            token = value;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Build query parameters
+    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    if (params?.application) {
+      // Filter by application if provided
+      const filters = JSON.stringify([
+        ["application", "=", params.application],
+      ]);
+      queryParams += `&filters=${encodeURIComponent(filters)}`;
+    } else if (params?.filters) {
+      queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(`/api/erpnext/device?${queryParams}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch devices",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch ERPNext devices:", error);
+    throw error;
+  }
+}
+
+// ERPNext Gateway API - Fetch gateways from ERPNext
+export async function fetchERPNextGateways(params?: {
+  fields?: string[];
+  filters?: string;
+  tenant?: string;
+}) {
+  try {
+    // Use Next.js API route as proxy to avoid CORS issues
+    const fields = params?.fields || ["*"];
+    const fieldsParam = JSON.stringify(fields);
+
+    // Get ERPNext token from localStorage or cookies
+    let token: string | null = null;
+    if (typeof window !== "undefined") {
+      token = localStorage.getItem("erpnext_token");
+      if (!token) {
+        // Try to get from cookies
+        const cookies = document.cookie.split(";");
+        for (const cookie of cookies) {
+          const [name, value] = cookie.trim().split("=");
+          if (name === "erpnext_token") {
+            token = value;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Build query parameters
+    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    if (params?.tenant) {
+      // Filter by tenant if provided
+      const filters = JSON.stringify([["tenant", "=", params.tenant]]);
+      queryParams += `&filters=${encodeURIComponent(filters)}`;
+    } else if (params?.filters) {
+      queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(`/api/erpnext/gateway?${queryParams}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch gateways",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch ERPNext gateways:", error);
     throw error;
   }
 }

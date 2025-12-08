@@ -2,6 +2,12 @@
 
 import { useApi } from "./apiHooks";
 import { useState, useEffect } from "react";
+import {
+  fetchERPNextTenants,
+  fetchERPNextApplications,
+  fetchERPNextDevices,
+  fetchERPNextGateways,
+} from "./api";
 
 // Custom hooks for dashboard data
 export function useDashboardData() {
@@ -134,7 +140,9 @@ export function useAdminDashboardData() {
   const api = useApi();
   const [organizations, setOrganizations] = useState([]);
   const [totalDevices, setTotalDevices] = useState(0);
+  const [totalApplications, setTotalApplications] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [totalGateways, setTotalGateways] = useState(0);
   const [systemStatus, setSystemStatus] = useState("Healthy");
   const [recentActivity, setRecentActivity] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -146,53 +154,51 @@ export function useAdminDashboardData() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch organizations data
-        const orgsData = (await api.listOrganizations({ limit: 100 })) as any;
-        setOrganizations(orgsData.resultList || []);
-
-        // Fetch total devices across all organizations
-        let totalDevicesCount = 0;
-        if (orgsData.resultList) {
-          for (const org of orgsData.resultList) {
-            try {
-              const appsData = (await api.listCsApplications({
-                organizationId: org.id,
-                limit: 100,
-              })) as any;
-              if (appsData.resultList) {
-                for (const app of appsData.resultList) {
-                  try {
-                    const devicesData = (await api.listCsDevices({
-                      applicationId: app.id,
-                      limit: 100,
-                    })) as any;
-                    totalDevicesCount += devicesData.resultList?.length || 0;
-                  } catch (err) {
-                    console.warn(
-                      `Failed to fetch devices for app ${app.id}:`,
-                      err
-                    );
-                  }
-                }
-              }
-            } catch (err) {
-              console.warn(
-                `Failed to fetch applications for org ${org.id}:`,
-                err
-              );
-            }
-          }
-        }
-        setTotalDevices(totalDevicesCount);
-
-        // Fetch total users from Keycloak
+        // Fetch tenants (organizations) from ERPNext
         try {
-          const userCountData = (await api.getUserCount()) as any;
-          setTotalUsers(userCountData.totalUsers || 0);
+          const tenantsData = await fetchERPNextTenants({ fields: ["*"] });
+          const tenants = (tenantsData as any).data || [];
+          setOrganizations(tenants);
         } catch (err) {
-          console.warn("Failed to fetch user count:", err);
-          setTotalUsers(0);
+          console.warn("Failed to fetch tenants:", err);
+          setOrganizations([]);
         }
+
+        // Fetch all applications from ERPNext
+        try {
+          const applicationsData = await fetchERPNextApplications({
+            fields: ["*"],
+          });
+          const applications = (applicationsData as any).data || [];
+          setTotalApplications(applications.length);
+        } catch (err) {
+          console.warn("Failed to fetch applications:", err);
+          setTotalApplications(0);
+        }
+
+        // Fetch all devices from ERPNext
+        try {
+          const devicesData = await fetchERPNextDevices({ fields: ["*"] });
+          const devices = (devicesData as any).data || [];
+          setTotalDevices(devices.length);
+        } catch (err) {
+          console.warn("Failed to fetch devices:", err);
+          setTotalDevices(0);
+        }
+
+        // Fetch all gateways from ERPNext
+        try {
+          const gatewaysData = await fetchERPNextGateways({ fields: ["*"] });
+          const gateways = (gatewaysData as any).data || [];
+          setTotalGateways(gateways.length);
+        } catch (err) {
+          console.warn("Failed to fetch gateways:", err);
+          setTotalGateways(0);
+        }
+
+        // Fetch total users - for now set to 0 as we don't have a user count API
+        // You can implement this if you have a user count endpoint
+        setTotalUsers(0);
 
         // Fetch recent activity (using recent uplinks as a proxy)
         try {
@@ -203,7 +209,7 @@ export function useAdminDashboardData() {
           setRecentActivity([]);
         }
 
-        // System status - for now, assume healthy if we can fetch data
+        // System status - assume healthy if we can fetch data
         setSystemStatus("Healthy");
       } catch (err) {
         console.error("Error fetching admin dashboard data:", err);
@@ -219,7 +225,9 @@ export function useAdminDashboardData() {
   return {
     organizations,
     totalDevices,
+    totalApplications,
     totalUsers,
+    totalGateways,
     systemStatus,
     recentActivity,
     isLoading,
@@ -232,10 +240,14 @@ export function useOrganizationStats() {
   const { organizations, isLoading, error } = useAdminDashboardData();
 
   const activeOrganizations = organizations.filter((org: any) => {
-    // Consider an organization active if it was updated recently
-    const updatedAt = new Date(org.updatedAt?.seconds * 1000);
-    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    return updatedAt > oneWeekAgo;
+    // Consider an organization active if it has a status or was modified recently
+    if (org.status === "Active") return true;
+    if (org.modified) {
+      const modifiedAt = new Date(org.modified);
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      return modifiedAt > oneWeekAgo;
+    }
+    return false;
   }).length;
 
   return {
@@ -250,20 +262,28 @@ export function useOrganizationStats() {
 export function useAdminRecentActivity() {
   const { recentActivity, isLoading, error } = useAdminDashboardData();
 
-  const formattedActivity = recentActivity.map((activity: any) => {
-    const timeAgo = getTimeAgo(new Date(activity.ts));
-    const deviceId = activity.device_id || "Unknown";
-    const applicationId = activity.application_id || "Unknown";
+  const formattedActivity = recentActivity
+    .filter((activity: any) => activity && activity.ts)
+    .map((activity: any) => {
+      try {
+        const timeAgo = getTimeAgo(new Date(activity.ts));
+        const deviceId = activity.device_id || "Unknown";
+        const applicationId = activity.application_id || "Unknown";
 
-    return {
-      id: activity.id || Math.random().toString(),
-      type: "Device Activity",
-      description: `Device ${deviceId} sent data`,
-      applicationId,
-      timeAgo,
-      timestamp: activity.ts,
-    };
-  });
+        return {
+          id: activity.id || Math.random().toString(),
+          type: "Device Activity",
+          description: `Device ${deviceId} sent data`,
+          applicationId,
+          timeAgo,
+          timestamp: activity.ts,
+        };
+      } catch (err) {
+        console.warn("Error formatting activity:", err);
+        return null;
+      }
+    })
+    .filter((activity: any) => activity !== null);
 
   return {
     recentActivity: formattedActivity,

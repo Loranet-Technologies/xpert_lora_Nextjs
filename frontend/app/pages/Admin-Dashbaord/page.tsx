@@ -15,6 +15,8 @@ import {
   Database,
   Loader2,
   AlertCircle,
+  Radio,
+  Zap,
 } from "lucide-react";
 import {
   useAdminDashboardData,
@@ -25,7 +27,9 @@ import {
 export default function AdminDashboard() {
   const {
     totalDevices,
+    totalApplications,
     totalUsers,
+    totalGateways,
     systemStatus,
     isLoading: dashboardLoading,
     error: dashboardError,
@@ -53,9 +57,8 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, your LoRaWAN overview. administrator access.
+            Welcome back! Your LoRaWAN system overview and administrator access.
           </p>
-          <div className="flex gap-2 mt-2"></div>
         </div>
 
         {hasError && (
@@ -67,31 +70,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm text-muted-foreground">
-                    Loading...
-                  </span>
-                </div>
-              ) : (
-                <>
-                  <div className="text-2xl font-bold">{totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Registered users
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -111,8 +90,32 @@ export default function AdminDashboard() {
                 <>
                   <div className="text-2xl font-bold">{totalOrganizations}</div>
                   <p className="text-xs text-muted-foreground">
-                    {activeOrganizations} active organizations
+                    {activeOrganizations} active tenants
                   </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Applications
+              </CardTitle>
+              <Zap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    Loading...
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{totalApplications}</div>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
                 </>
               )}
             </CardContent>
@@ -136,9 +139,31 @@ export default function AdminDashboard() {
               ) : (
                 <>
                   <div className="text-2xl font-bold">{totalDevices}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Across all organizations
-                  </p>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Gateways
+              </CardTitle>
+              <Radio className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">
+                    Loading...
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{totalGateways}</div>
+                  <p className="text-xs text-muted-foreground">From ERPNext</p>
                 </>
               )}
             </CardContent>

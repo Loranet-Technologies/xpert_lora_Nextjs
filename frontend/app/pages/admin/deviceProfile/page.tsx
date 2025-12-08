@@ -4,7 +4,8 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import {
-  listOrganizations,
+  fetchERPNextTenants,
+  fetchERPNextDeviceProfiles,
   listCsDeviceProfiles,
   createCsDeviceProfile,
   updateCsDeviceProfile,
@@ -56,15 +57,36 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Plus, Edit, Trash2, Building2, Settings } from "lucide-react";
 
-type OrgItem = { id: string; name?: string };
-type DeviceProfileItem = {
-  id: string;
-  name?: string;
-  description?: string;
-  region?: string | number;
-};
+// ERPNext Tenant type
+type Tenant = {
+  name: string;
+  tenant_name: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Device Profile type
+type DeviceProfile = {
+  name: string;
+  owner: string;
+  creation: string;
+  modified: string;
+  modified_by: string;
+  docstatus: number;
+  idx: number;
+  profile_name: string;
+  chirpstack_id?: string;
+  tenant: string;
+  region?: string;
+  small_text?: string;
+  mac_version?: string;
+  regional_parameters_revision?: string;
+  supports_otaa_join?: number;
+  supports_32_bit_frame_counter?: number;
+  metadata?: any;
+} & Record<string, any>;
 
 const REGIONS = [
   "EU868",
@@ -109,55 +131,69 @@ function getRegionName(regionEnum: number | string | undefined): string {
   return "N/A";
 }
 
+// Helper function to format ERPNext date
+function formatERPNextDate(dateString?: string): string {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+  } catch {
+    return dateString;
+  }
+}
+
+// Helper function to parse region string (can be multiple regions separated by \n)
+function parseRegions(regionString?: string): string[] {
+  if (!regionString) return [];
+  // Split by \n and filter out empty strings
+  return regionString.split("\\n").filter((r) => r.trim().length > 0);
+}
+
 export default function DeviceProfileAdminPage() {
-  const [orgs, setOrgs] = useState<OrgItem[]>([]);
-  const [profiles, setProfiles] = useState<DeviceProfileItem[]>([]);
-  const [selectedOrg, setSelectedOrg] = useState<string>("");
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [profiles, setProfiles] = useState<DeviceProfile[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newRegion, setNewRegion] = useState("");
-  const [editingProfile, setEditingProfile] =
-    useState<DeviceProfileItem | null>(null);
+  const [editingProfile, setEditingProfile] = useState<DeviceProfile | null>(
+    null
+  );
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editRegion, setEditRegion] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  async function loadOrgs() {
-    const res = await listOrganizations({ limit: 100 });
-    setOrgs((res as any).resultList || []);
-  }
-
-  async function loadProfiles(tenantId: string) {
+  async function loadTenants() {
     setLoading(true);
     setError(null);
     try {
-      const res = await listCsDeviceProfiles({ tenantId });
-      const profileList = (res as any).resultList || [];
+      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const data = (res as any).data || [];
+      setTenants(data as Tenant[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tenants");
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      // Fetch full details for each profile to get description
-      const profilesWithDetails = await Promise.all(
-        profileList.map(async (profile: any) => {
-          try {
-            const fullProfile = (await getCsDeviceProfile(profile.id)) as any;
-            return {
-              ...profile,
-              description: fullProfile.deviceProfile?.description || "",
-              region: fullProfile.deviceProfile?.region || profile.region,
-            };
-          } catch (error) {
-            console.warn(
-              `Failed to fetch details for profile ${profile.id}:`,
-              error
-            );
-            return profile; // Return original profile if fetch fails
-          }
-        })
-      );
-
-      setProfiles(profilesWithDetails);
+  async function loadProfiles(tenantId?: string) {
+    if (!tenantId) {
+      setProfiles([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchERPNextDeviceProfiles({
+        fields: ["*"],
+        tenant: tenantId,
+      });
+      const data = (res as any).data || [];
+      setProfiles(data as DeviceProfile[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load device profiles");
     } finally {
@@ -166,60 +202,81 @@ export default function DeviceProfileAdminPage() {
   }
 
   useEffect(() => {
-    loadOrgs();
+    loadTenants();
   }, []);
 
   useEffect(() => {
-    if (selectedOrg) loadProfiles(selectedOrg);
-  }, [selectedOrg]);
+    if (selectedTenant) {
+      loadProfiles(selectedTenant);
+    } else {
+      setProfiles([]);
+    }
+  }, [selectedTenant]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedOrg) return;
+    if (!selectedTenant) return;
     try {
-      await createCsDeviceProfile({
-        name: newName,
-        tenantId: selectedOrg,
-        description: newDescription || undefined,
-        region: newRegion || undefined,
-      });
-      setNewName("");
-      setNewDescription("");
-      setNewRegion("");
-      await loadProfiles(selectedOrg);
+      // Note: Creating device profiles in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the create endpoint
+      setError(
+        "Create functionality for ERPNext device profiles not yet implemented"
+      );
+      // await createCsDeviceProfile({
+      //   name: newName,
+      //   tenantId: selectedTenant,
+      //   description: newDescription || undefined,
+      //   region: newRegion || undefined,
+      // });
+      // setNewName("");
+      // setNewDescription("");
+      // setNewRegion("");
+      // await loadProfiles(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to create device profile");
     }
   }
 
-  function handleEdit(profile: DeviceProfileItem) {
+  function handleEdit(profile: DeviceProfile) {
     setEditingProfile(profile);
-    setEditName(profile.name || "");
-    setEditDescription(profile.description || "");
-    setEditRegion(getRegionName(profile.region));
+    setEditName(profile.profile_name || "");
+    setEditDescription(profile.small_text || "");
+    // Get first region from the region string if multiple regions exist
+    const regions = parseRegions(profile.region);
+    setEditRegion(regions.length > 0 ? regions[0] : "");
     setIsEditDialogOpen(true);
   }
 
   async function handleSaveEdit() {
     if (!editingProfile) return;
     try {
-      await updateCsDeviceProfile(editingProfile.id, {
-        name: editName,
-        description: editDescription || undefined,
-        region: editRegion || undefined,
-      });
-      await loadProfiles(selectedOrg);
-      setIsEditDialogOpen(false);
-      setEditingProfile(null);
+      // Note: Updating device profiles in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the update endpoint
+      setError(
+        "Update functionality for ERPNext device profiles not yet implemented"
+      );
+      // await updateCsDeviceProfile(editingProfile.name, {
+      //   name: editName,
+      //   description: editDescription || undefined,
+      //   region: editRegion || undefined,
+      // });
+      // await loadProfiles(selectedTenant);
+      // setIsEditDialogOpen(false);
+      // setEditingProfile(null);
     } catch (e: any) {
       setError(e?.message || "Failed to update device profile");
     }
   }
 
-  async function handleDelete(profile: DeviceProfileItem) {
+  async function handleDelete(profile: DeviceProfile) {
     try {
-      await deleteCsDeviceProfile(profile.id);
-      await loadProfiles(selectedOrg);
+      // Note: Deleting device profiles in ERPNext would require a different API endpoint
+      // For now, we'll show an error or you can implement the delete endpoint
+      setError(
+        "Delete functionality for ERPNext device profiles not yet implemented"
+      );
+      // await deleteCsDeviceProfile(profile.name);
+      // await loadProfiles(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to delete device profile");
     }
@@ -237,7 +294,7 @@ export default function DeviceProfileAdminPage() {
               Device Profiles
             </h1>
             <p className="text-muted-foreground">
-              Manage device profiles for your LoRaWAN devices
+              Manage device profiles from ERPNext
             </p>
           </div>
         </div>
@@ -249,29 +306,30 @@ export default function DeviceProfileAdminPage() {
               Create New Device Profile
             </CardTitle>
             <CardDescription>
-              Select an organization and create a new device profile
+              Note: Create functionality for ERPNext device profiles not yet
+              implemented
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <Label htmlFor="organization-select" className="mb-2">
-                    Organization
+                  <Label htmlFor="tenant-select" className="mb-2">
+                    Tenant
                   </Label>
-                  <Select value={selectedOrg} onValueChange={setSelectedOrg}>
-                    <SelectTrigger
-                      id="organization-select"
-                      className="min-w-[260px]"
-                    >
-                      <SelectValue placeholder="Select organization..." />
+                  <Select
+                    value={selectedTenant}
+                    onValueChange={setSelectedTenant}
+                  >
+                    <SelectTrigger id="tenant-select" className="min-w-[260px]">
+                      <SelectValue placeholder="Select tenant..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {orgs.map((o) => (
-                        <SelectItem key={o.id} value={o.id}>
+                      {tenants.map((t) => (
+                        <SelectItem key={t.name} value={t.name}>
                           <div className="flex items-center gap-2">
                             <Building2 className="w-4 h-4" />
-                            {o.name || o.id}
+                            {t.tenant_name || t.name}
                           </div>
                         </SelectItem>
                       ))}
@@ -314,7 +372,7 @@ export default function DeviceProfileAdminPage() {
                   <div className="flex items-end">
                     <Button
                       type="submit"
-                      disabled={!selectedOrg}
+                      disabled={!selectedTenant}
                       className="w-full"
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -349,9 +407,11 @@ export default function DeviceProfileAdminPage() {
           <CardHeader>
             <CardTitle>Device Profiles</CardTitle>
             <CardDescription>
-              {selectedOrg
-                ? "Device profiles in the selected organization"
-                : "Select an organization to view device profiles"}
+              {selectedTenant
+                ? `${profiles.length} profile${
+                    profiles.length !== 1 ? "s" : ""
+                  } from ERPNext`
+                : "Select a tenant to view device profiles"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -366,9 +426,12 @@ export default function DeviceProfileAdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Region</TableHead>
+                      <TableHead>Profile Name</TableHead>
+                      <TableHead>ChirpStack ID</TableHead>
+                      <TableHead>Region(s)</TableHead>
                       <TableHead>Description</TableHead>
+                      <TableHead>MAC Version</TableHead>
+                      <TableHead>Created</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -376,74 +439,103 @@ export default function DeviceProfileAdminPage() {
                     {profiles.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={5}
+                          colSpan={8}
                           className="text-center py-8 text-muted-foreground"
                         >
-                          {selectedOrg
+                          {selectedTenant
                             ? "No device profiles found"
-                            : "Select an organization to view device profiles"}
+                            : "Select a tenant to view device profiles"}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      profiles.map((p) => (
-                        <TableRow key={p.id}>
-                          <TableCell className="font-mono text-sm">
-                            {p.id}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {p.name}
-                          </TableCell>
-                          <TableCell>
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                              {getRegionName(p.region)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {p.description || "No description"}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(p)}
-                              >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="sm">
-                                    <Trash2 className="w-4 h-4 mr-1" />
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Delete Device Profile
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "{p.name}
-                                      "? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(p)}
+                      profiles.map((p) => {
+                        const regions = parseRegions(p.region);
+                        return (
+                          <TableRow key={p.name}>
+                            <TableCell className="font-mono text-sm">
+                              <Badge variant="outline">
+                                {p.name?.substring(0, 8)}...
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {p.profile_name || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {p.chirpstack_id || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {regions.length > 0 ? (
+                                  regions.map((region, idx) => (
+                                    <Badge
+                                      key={idx}
+                                      variant="outline"
+                                      className="text-xs"
                                     >
+                                      {region}
+                                    </Badge>
+                                  ))
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">
+                                    —
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {p.small_text || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {p.mac_version || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {formatERPNextDate(p.creation)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(p)}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                      <Trash2 className="w-4 h-4 mr-1" />
                                       Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Device Profile
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete "
+                                        {p.profile_name || p.name}"? This action
+                                        cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(p)}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -457,7 +549,8 @@ export default function DeviceProfileAdminPage() {
             <DialogHeader>
               <DialogTitle>Edit Device Profile</DialogTitle>
               <DialogDescription>
-                Update the device profile information
+                Update the device profile information (Note: Update
+                functionality not yet implemented)
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -468,11 +561,16 @@ export default function DeviceProfileAdminPage() {
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Enter profile name"
+                  disabled
                 />
               </div>
               <div>
                 <Label htmlFor="edit-region">Region</Label>
-                <Select value={editRegion} onValueChange={setEditRegion}>
+                <Select
+                  value={editRegion}
+                  onValueChange={setEditRegion}
+                  disabled
+                >
                   <SelectTrigger id="edit-region">
                     <SelectValue placeholder="Select region..." />
                   </SelectTrigger>
@@ -492,6 +590,7 @@ export default function DeviceProfileAdminPage() {
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
                   placeholder="Enter profile description"
+                  disabled
                 />
               </div>
             </div>

@@ -16,21 +16,24 @@ import {
 // Import the actual page components
 import DevicesPage from "./pages/devices/page";
 import ApplicationsPage from "./pages/applications/page";
-import CreateDevicePage from "./pages/create-device/page";
-import EnhancedUplinksPage from "./pages/enhanced-uplinks/page";
-import DownlinksPage from "./pages/downlinks/page";
-import AdminPage from "./pages/admin/page";
 import UserDashboard from "./pages/userDashaboard/page";
+import OrganizationsAdminPage from "./pages/admin/organizations/page";
+import DeviceProfile from "./pages/admin/deviceProfile/page";
+import AdminDashboardPage from "./pages/Admin-Dashbaord/page";
 import { LogOutIcon } from "lucide-react";
+import ApplicationsAdminPage from "./pages/admin/applications/page";
+import DevicesAdminPage from "./pages/admin/devices/page";
+import DeviceProfileAdminPage from "./pages/admin/deviceProfile/page";
+import GatewayAdminPage from "./pages/admin/gateway/page";
 
 export default function Home() {
-  const { isAuthenticated, isLoading, roles, logout, user } = useAuth();
-  const [activeTab, setActiveTab] = useState("uplinks");
+  const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const [activeTab, setActiveTab] = useState("organizations");
 
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-between">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
@@ -44,51 +47,25 @@ export default function Home() {
     return <LoginPage />;
   }
 
-  // Define tabs based on user roles
+  // Define all available tabs
   const allTabs = [
+    { id: "organizations", name: "Organizations", icon: "📡" },
+    { id: "applications", name: "Applications", icon: "📋" },
+    { id: "deviceProfile", name: "Device Profile", icon: "📝" },
+    { id: "devices", name: "Devices", icon: "📱" },
+    { id: "gateway", name: "Gateway", icon: "📻" },
     {
-      id: "uplinks",
-      name: "Uplinks",
-      icon: "📡",
-      roles: ["user_role", "admin_role"],
-    },
-    {
-      id: "downlinks",
-      name: "Downlinks",
-      icon: "🔧",
-      roles: ["user_role", "admin_role"],
-    },
-    {
-      id: "devices",
-      name: "Devices",
-      icon: "📱",
-      roles: ["user_role", "admin_role"],
-    },
-    {
-      id: "applications",
-      name: "Applications",
-      icon: "📋",
-      roles: ["user_role", "admin_role"],
-    },
-    {
-      id: "create",
-      name: "Create Device",
-      icon: "🔧",
-      roles: ["user_role", "admin_role"],
+      id: "Admin-Dashboard",
+      name: "Admin Dashboard",
+      icon: "📊",
+      roles: ["admin_role"],
     },
     {
       id: "Userdashboard",
       name: "User Dashboard",
       icon: "👤",
-      roles: ["user_role", "admin_role"],
     },
-    { id: "Admin", name: "Admin", icon: "⚙️", roles: ["admin_role"] },
   ];
-
-  // Filter tabs based on user roles
-  const availableTabs = allTabs.filter((tab) =>
-    tab.roles.some((role) => roles.includes(role))
-  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -101,7 +78,7 @@ export default function Home() {
                 LoRaWAN Dashboard
               </h1>
               <div className="flex space-x-1">
-                {availableTabs.map((tab) => (
+                {allTabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
@@ -171,13 +148,13 @@ export default function Home() {
 
       {/* Content - Show actual page components */}
       <main>
-        {activeTab === "uplinks" && <EnhancedUplinksPage />}
+        {activeTab === "organizations" && <OrganizationsAdminPage />}
+        {activeTab === "applications" && <ApplicationsAdminPage />}
+        {activeTab === "deviceProfile" && <DeviceProfileAdminPage />}
+        {activeTab === "devices" && <DevicesAdminPage />}
+        {activeTab === "gateway" && <GatewayAdminPage />}
+        {activeTab === "Admin-Dashboard" && <AdminDashboardPage />}
         {activeTab === "Userdashboard" && <UserDashboard />}
-        {activeTab === "devices" && <DevicesPage />}
-        {activeTab === "applications" && <ApplicationsPage />}
-        {activeTab === "create" && <CreateDevicePage />}
-        {activeTab === "downlinks" && <DownlinksPage />}
-        {activeTab === "Admin" && <AdminPage />}
       </main>
     </div>
   );

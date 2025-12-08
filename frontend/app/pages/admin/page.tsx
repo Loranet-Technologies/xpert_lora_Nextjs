@@ -6,6 +6,7 @@ import DevicesAdminPage from "./devices/page";
 import ApplicationsAdminPage from "./applications/page";
 import AdminDashboardPage from "../Admin-Dashbaord/page";
 import DeviceProfile from "./deviceProfile/page";
+import GatewayAdminPage from "./gateway/page";
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState("organizations");
@@ -15,6 +16,7 @@ export default function AdminPage() {
     { id: "applications", name: "Applications", icon: "📋" },
     { id: "deviceProfile", name: "Device Profile", icon: "📝" },
     { id: "devices", name: "Devices", icon: "📱" },
+    { id: "gateway", name: "Gateway", icon: "📻" },
     {
       id: "Admin-Dashboard",
       name: "Admin Dashboard",
@@ -57,6 +59,7 @@ export default function AdminPage() {
         {activeTab === "devices" && <DevicesAdminPage />}
         {activeTab === "applications" && <ApplicationsAdminPage />}
         {activeTab === "deviceProfile" && <DeviceProfile />}
+        {activeTab === "gateway" && <GatewayAdminPage />}
         {activeTab === "Admin-Dashboard" && <AdminDashboardPage />}
       </main>
     </div>

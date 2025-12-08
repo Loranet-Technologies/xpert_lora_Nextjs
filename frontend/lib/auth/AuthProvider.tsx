@@ -18,8 +18,8 @@ const keycloakConfig = {
   url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:9090",
   realm: process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "lorawan",
   clientId: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "lorawan-frontend",
-  clientSecret: "abj9b1dUHolJs5EXkwhLLxH1CvkCXMNn",
-  clientUuid: "19e19ca1-b812-4480-ad5d-b1b18df32cc2",
+  clientSecret: "t4nA73Y5WziRhqkkKGLO2FDHp9YhIlmv",
+  clientUuid: "e55935fd-8e59-4891-bebb-e9a567c3b379",
 };
 
 // Development mode - set to true to bypass Keycloak for testing
@@ -89,15 +89,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [authMethod, setAuthMethod] = useState<"erpnext" | "keycloak" | null>(null);
+  const [authMethod, setAuthMethod] = useState<"erpnext" | "keycloak" | null>(
+    null
+  );
 
   // Check ERPNext session
   const checkERPNextSession = async () => {
     try {
       const erpnextUser = localStorage.getItem("erpnext_user");
-      const erpnextToken = localStorage.getItem("erpnext_token") || Cookies.get("erpnext_token");
+      const erpnextToken =
+        localStorage.getItem("erpnext_token") || Cookies.get("erpnext_token");
       const sessionActive = localStorage.getItem("erpnext_session_active");
-      
+
       if (sessionActive === "true" && erpnextUser && erpnextToken) {
         // Verify session is still valid by checking user info via proxy using token
         const response = await fetch("/api/erpnext/user", {
@@ -112,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await response.json();
           if (userData.message) {
             const storedUser = JSON.parse(erpnextUser);
-            
+
             setUser(storedUser);
             setToken(erpnextToken);
             setRoles(storedUser.roles || ["user_role"]);
@@ -174,7 +177,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const initKeycloak = async () => {
-
       try {
         const kc = new Keycloak({
           url: keycloakConfig.url,
@@ -255,8 +257,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleERPNextAuth = async (responseData: any) => {
     try {
       // Extract token from login response
-      const token = responseData.token || responseData.message?.token || responseData.message;
-      
+      const token =
+        responseData.token ||
+        responseData.message?.token ||
+        responseData.message;
+
       if (!token) {
         throw new Error("No token received from login response");
       }
@@ -264,7 +269,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Store token
       localStorage.setItem("erpnext_token", token);
       Cookies.set("erpnext_token", token, { expires: 7 }); // Store in cookies as backup
-      
+
       // After successful login, fetch user info using token
       const userResponse = await fetch("/api/erpnext/user", {
         method: "GET",
@@ -307,8 +312,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userInfo = {
         id: userData.email || userData.name || username,
         username: userData.name || username,
-        firstName: userData.first_name || userData.full_name?.split(" ")[0] || "",
-        lastName: userData.last_name || userData.full_name?.split(" ").slice(1).join(" ") || "",
+        firstName:
+          userData.first_name || userData.full_name?.split(" ")[0] || "",
+        lastName:
+          userData.last_name ||
+          userData.full_name?.split(" ").slice(1).join(" ") ||
+          "",
         email: userData.email || username,
       };
 
@@ -319,7 +328,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Extract roles from user data if available
       const userRoles = userData.roles || userData.user_roles || ["user_role"];
-      
+
       // Store and use the actual token
       setToken(token);
 
@@ -410,7 +419,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const responseData = await loginWithERPNext({
         usr: username,
         pwd: password,
@@ -419,7 +428,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await handleERPNextAuth(responseData);
     } catch (error) {
       console.error("ERPNext login failed:", error);
-      setError(error instanceof Error ? error.message : "Login failed. Please check your credentials.");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please check your credentials."
+      );
       setIsLoading(false);
       throw error;
     }
@@ -437,7 +450,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error("Login failed:", error);
-      setError(error instanceof Error ? error.message : "Keycloak login failed");
+      setError(
+        error instanceof Error ? error.message : "Keycloak login failed"
+      );
       setIsLoading(false);
     }
   };
@@ -447,7 +462,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       if (authMethod === "erpnext") {
         // ERPNext logout via proxy with token
-        const erpnextToken = localStorage.getItem("erpnext_token") || Cookies.get("erpnext_token");
+        const erpnextToken =
+          localStorage.getItem("erpnext_token") || Cookies.get("erpnext_token");
         if (erpnextToken) {
           try {
             await fetch("/api/erpnext/logout", {
@@ -461,7 +477,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             console.error("ERPNext logout API call failed:", error);
           }
         }
-        
+
         // Clear ERPNext stored data
         localStorage.removeItem("erpnext_user");
         localStorage.removeItem("erpnext_username");
