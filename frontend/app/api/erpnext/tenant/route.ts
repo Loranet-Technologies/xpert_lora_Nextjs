@@ -20,23 +20,54 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const fields = searchParams.get("fields") || '["*"]';
 
-    // Forward the request to ERPNext with token in Authorization header
-    // ERPNext can accept token in Authorization header or Cookie
+    // Determine token type and format headers accordingly
+    // ERPNext accepts:
+    // 1. API Token: "Token api_key:api_secret" in Authorization header
+    // 2. Session ID: "sid" in Cookie header
+    // 3. Keycloak token: Bearer token (validated by auth hook)
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (token.startsWith("Token ")) {
+      // ERPNext API token format
+      headers["Authorization"] = token;
+    } else if (token.includes(":")) {
+      // Might be an API token without "Token " prefix, or Keycloak token
+      // Try as Bearer token first (for Keycloak), auth hook will validate
+      headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      // Likely a session ID
+      headers["Cookie"] = `sid=${token}`;
+      // Also try as Bearer token for Keycloak compatibility
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Forward the request to ERPNext
     const response = await fetch(
-      `${ERPNext_BASE_URL}/api/resource/Tenant?fields=${encodeURIComponent(fields)}`,
+      `${ERPNext_BASE_URL}/api/resource/Tenant?fields=${encodeURIComponent(
+        fields
+      )}`,
       {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Cookie: `sid=${token}`, // Also send as cookie for ERPNext compatibility
-        },
+        headers,
       }
     );
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: "Failed to fetch tenants",
-      }));
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to fetch tenants" };
+
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText || "Failed to fetch tenants" };
+      }
+
+      console.error(
+        `Failed to fetch tenants: ${response.status} - ${errorData.message}`
+      );
+
       return NextResponse.json(
         { message: errorData.message || "Failed to fetch tenants" },
         { status: response.status }
@@ -49,10 +80,10 @@ export async function GET(request: NextRequest) {
     console.error("ERPNext tenant proxy error:", error);
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
   }
 }
-

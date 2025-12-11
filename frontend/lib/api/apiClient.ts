@@ -121,10 +121,10 @@ class ApiClient {
 
       // Call Keycloak token refresh endpoint
       const keycloakUrl =
-        process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:9090";
-      const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "lorawan";
+        process.env.NEXT_PUBLIC_KEYCLOAK_URL || "https://keycloak.loranet.my";
+      const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "loranet_xperts";
       const clientId =
-        process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "lorawan-frontend";
+        process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "loranet_xperts";
 
       const response = await fetch(
         `${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`,

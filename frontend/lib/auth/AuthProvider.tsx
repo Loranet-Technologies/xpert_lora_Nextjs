@@ -8,19 +8,10 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
-import Keycloak from "keycloak-js";
+import { useSession, signIn, signOut } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import { loginWithERPNext } from "../api/api";
-
-// Keycloak configuration - use environment variables with fallbacks
-const keycloakConfig = {
-  url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || "http://localhost:9090",
-  realm: process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "lorawan",
-  clientId: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || "lorawan-frontend",
-  clientSecret: "t4nA73Y5WziRhqkkKGLO2FDHp9YhIlmv",
-  clientUuid: "e55935fd-8e59-4891-bebb-e9a567c3b379",
-};
 
 // Development mode - set to true to bypass Keycloak for testing
 const DEV_MODE =
@@ -76,6 +67,7 @@ const ERPNext_BASE_URL =
   process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { data: session, status } = useSession();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -87,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     lastName?: string;
     email?: string;
   } | null>(null);
-  const [keycloak, setKeycloak] = useState<Keycloak | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authMethod, setAuthMethod] = useState<"erpnext" | "keycloak" | null>(
     null
@@ -146,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Initialize Authentication
+  // Handle NextAuth session (Keycloak)
   useEffect(() => {
     const initAuth = async () => {
       // Development mode - bypass authentication
@@ -172,86 +163,149 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Fallback to Keycloak initialization
-      await initKeycloak();
-    };
+      // Handle NextAuth session
+      if (status === "loading") {
+        setIsLoading(true);
+        return;
+      }
 
-    const initKeycloak = async () => {
-      try {
-        const kc = new Keycloak({
-          url: keycloakConfig.url,
-          realm: keycloakConfig.realm,
-          clientId: keycloakConfig.clientId,
-        });
-
-        setKeycloak(kc);
-
-        // Set a timeout to prevent infinite loading
-        const timeout = setTimeout(() => {
-          console.warn(
-            "Keycloak initialization timeout - Keycloak may not be running"
-          );
-          setIsLoading(false);
-        }, 10000); // 10 second timeout
-
-        // Try to authenticate with stored token first
-        const storedToken = Cookies.get("keycloak_token");
-        if (storedToken) {
-          try {
-            // Verify token is still valid
-            const decoded = jwtDecode<JWTPayload>(storedToken);
-            const now = Math.floor(Date.now() / 1000);
-
-            if (decoded.exp > now) {
-              // Token is still valid
-              await kc.init({
-                onLoad: "check-sso",
-                silentCheckSsoRedirectUri:
-                  window.location.origin + "/silent-check-sso.html",
-                token: storedToken,
-                refreshToken:
-                  Cookies.get("keycloak_refresh_token") || undefined,
-              });
-            } else {
-              // Token expired, try to refresh
-              await kc.init({
-                onLoad: "check-sso",
-                silentCheckSsoRedirectUri:
-                  window.location.origin + "/silent-check-sso.html",
-              });
-            }
-          } catch (error) {
-            console.warn("Invalid stored token, re-authenticating:", error);
-            await kc.init({
-              onLoad: "check-sso",
-              silentCheckSsoRedirectUri:
-                window.location.origin + "/silent-check-sso.html",
-            });
-          }
-        } else {
-          await kc.init({
-            onLoad: "check-sso",
-            silentCheckSsoRedirectUri:
-              window.location.origin + "/silent-check-sso.html",
-          });
-        }
-
-        clearTimeout(timeout);
-
-        if (kc.authenticated) {
-          await handleAuthentication(kc);
-        } else {
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error("Keycloak initialization failed:", error);
-        console.log("Make sure Keycloak is running on http://localhost:9090");
+      if (status === "authenticated" && session) {
+        await handleNextAuthSession(session);
+      } else {
         setIsLoading(false);
+        setIsAuthenticated(false);
       }
     };
 
     initAuth();
-  }, []);
+  }, [session, status]);
+
+  // Handle NextAuth session
+  const handleNextAuthSession = async (session: any) => {
+    try {
+      const accessToken = session.accessToken as string;
+      if (!accessToken) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Decode token to get user info and roles
+      const decoded = jwtDecode<JWTPayload>(accessToken);
+
+      // Extract roles from token
+      const realmRoles = decoded.realm_access?.roles || [];
+      const resourceRoles = Object.values(
+        decoded.resource_access || {}
+      ).flatMap((r) => r.roles || []);
+      const allRoles = [...realmRoles, ...resourceRoles];
+
+      setToken(accessToken);
+      setRoles(allRoles);
+      setUser({
+        id: decoded.sub,
+        username:
+          (decoded as any).preferred_username ||
+          (decoded as any).name ||
+          (decoded as any).username ||
+          decoded.sub,
+        firstName:
+          (decoded as any).given_name ||
+          (decoded as any).first_name ||
+          (decoded as any).firstName,
+        lastName:
+          (decoded as any).family_name ||
+          (decoded as any).last_name ||
+          (decoded as any).lastName,
+        email: (decoded as any).email || session.user?.email || undefined,
+      });
+      setIsAuthenticated(true);
+      setAuthMethod("keycloak");
+      setIsLoading(false);
+
+      console.log("NextAuth authentication successful:", {
+        user: decoded.sub,
+        username:
+          (decoded as any).preferred_username ||
+          (decoded as any).name ||
+          (decoded as any).username,
+        email: (decoded as any).email || session.user?.email,
+        roles: allRoles,
+      });
+
+      // Automatically attempt to authenticate with ERPNext after Keycloak login
+      try {
+        await authenticateERPNextWithKeycloak(accessToken);
+      } catch (erpnextError) {
+        console.warn(
+          "Failed to automatically authenticate with ERPNext:",
+          erpnextError
+        );
+        // Don't fail the Keycloak authentication if ERPNext auth fails
+        // The user can still use the app, but ERPNext features won't work
+      }
+    } catch (error) {
+      console.error("NextAuth session handling failed:", error);
+      setIsLoading(false);
+    }
+  };
+
+  // Authenticate with ERPNext using Keycloak token
+  const authenticateERPNextWithKeycloak = async (keycloakToken: string) => {
+    try {
+      // Try to login to ERPNext using Keycloak token via SSO endpoint
+      const response = await fetch("/api/erpnext/login-with-keycloak", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ keycloakToken }),
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.token) {
+          // Store ERPNext token (format: "Token api_key:api_secret" or session ID)
+          localStorage.setItem("erpnext_token", data.token);
+          Cookies.set("erpnext_token", data.token, { expires: 7 });
+
+          // Also store API key and secret if available (for future use)
+          if (data.api_key) {
+            localStorage.setItem("erpnext_api_key", data.api_key);
+          }
+          if (data.api_secret) {
+            localStorage.setItem("erpnext_api_secret", data.api_secret);
+          }
+
+          console.log(
+            "✅ ERPNext authentication successful with Keycloak token"
+          );
+
+          // Store session as active
+          localStorage.setItem("erpnext_session_active", "true");
+        } else {
+          console.warn("⚠️ ERPNext SSO login succeeded but no token returned");
+        }
+      } else {
+        // SSO login failed - the auth hook should still handle Keycloak tokens
+        const errorData = await response.json().catch(() => ({}));
+        console.warn(
+          "⚠️ ERPNext SSO login failed:",
+          errorData.message || `Status ${response.status}`
+        );
+        console.log(
+          "ℹ️ ERPNext auth hook should still validate Keycloak tokens for API calls"
+        );
+        // Don't throw - let the auth hook handle Keycloak tokens directly
+      }
+    } catch (error) {
+      console.error("ERPNext authentication with Keycloak failed:", error);
+      // Don't throw - let the auth hook handle Keycloak tokens directly
+      console.log(
+        "ℹ️ ERPNext auth hook should still validate Keycloak tokens for API calls"
+      );
+    }
+  };
 
   // Handle ERPNext authentication
   const handleERPNextAuth = async (responseData: any) => {
@@ -353,67 +407,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Handle successful authentication
-  const handleAuthentication = async (kc: Keycloak) => {
-    try {
-      const token = kc.token || "";
-      const refreshToken = kc.refreshToken || "";
-
-      // Store tokens in cookies and localStorage
-      Cookies.set("keycloak_token", token, { expires: 1 }); // 1 day
-      Cookies.set("keycloak_refresh_token", refreshToken, { expires: 7 }); // 7 days
-      localStorage.setItem("keycloak_token", token);
-      localStorage.setItem("keycloak_refresh_token", refreshToken);
-
-      // Decode token to get user info and roles
-      const decoded = jwtDecode<JWTPayload>(token);
-
-      // Extract roles from token
-      const realmRoles = decoded.realm_access?.roles || [];
-      const resourceRoles = Object.values(
-        decoded.resource_access || {}
-      ).flatMap((r) => r.roles || []);
-      const allRoles = [...realmRoles, ...resourceRoles];
-
-      setToken(token);
-      setRoles(allRoles);
-      setUser({
-        id: decoded.sub,
-        username:
-          (decoded as any).preferred_username ||
-          (decoded as any).name ||
-          (decoded as any).username ||
-          decoded.sub,
-        firstName:
-          (decoded as any).given_name ||
-          (decoded as any).first_name ||
-          (decoded as any).firstName,
-        lastName:
-          (decoded as any).family_name ||
-          (decoded as any).last_name ||
-          (decoded as any).lastName,
-        email: (decoded as any).email,
-      });
-      setIsAuthenticated(true);
-      setIsLoading(false);
-
-      console.log("Authentication successful:", {
-        user: decoded.sub,
-        username:
-          (decoded as any).preferred_username ||
-          (decoded as any).name ||
-          (decoded as any).username,
-        email: (decoded as any).email,
-        roles: allRoles,
-        token: token.substring(0, 20) + "...",
-        fullDecoded: decoded, // Debug: log the full decoded token
-      });
-    } catch (error) {
-      console.error("Authentication handling failed:", error);
-      setIsLoading(false);
-    }
-  };
-
   // ERPNext login function
   const handleERPNextLogin = async (username: string, password: string) => {
     try {
@@ -438,15 +431,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Keycloak login function
+  // Keycloak login function (using NextAuth)
   const login = async () => {
-    if (!keycloak) return;
-
     try {
       setIsLoading(true);
       setError(null);
-      await keycloak.login({
-        redirectUri: window.location.origin + "/",
+      await signIn("keycloak", {
+        callbackUrl: window.location.origin + "/",
       });
     } catch (error) {
       console.error("Login failed:", error);
@@ -484,17 +475,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("erpnext_token");
         localStorage.removeItem("erpnext_session_active");
         Cookies.remove("erpnext_token");
-      } else if (keycloak) {
-        // Keycloak logout
-        // Clear stored tokens
-        Cookies.remove("keycloak_token");
-        Cookies.remove("keycloak_refresh_token");
-        localStorage.removeItem("keycloak_token");
-        localStorage.removeItem("keycloak_refresh_token");
-
-        // Logout from Keycloak
-        await keycloak.logout({
-          redirectUri: window.location.origin + "/",
+      } else if (authMethod === "keycloak") {
+        // NextAuth logout
+        await signOut({
+          callbackUrl: window.location.origin + "/",
         });
       }
 
@@ -508,35 +492,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error("Logout failed:", error);
     }
-  }, [keycloak, authMethod]);
+  }, [authMethod]);
 
-  // Refresh token function
+  // Refresh token function (NextAuth handles this automatically)
   const refreshToken = useCallback(async () => {
-    if (!keycloak || !keycloak.authenticated) return;
-
-    try {
-      const refreshed = await keycloak.updateToken(30); // Refresh if expires within 30 seconds
-      if (refreshed) {
-        const newToken = keycloak.token || "";
-        Cookies.set("keycloak_token", newToken, { expires: 1 });
-        localStorage.setItem("keycloak_token", newToken);
-        setToken(newToken);
-
-        // Update roles in case they changed
-        const decoded = jwtDecode<JWTPayload>(newToken);
-        const realmRoles = decoded.realm_access?.roles || [];
-        const resourceRoles = Object.values(
-          decoded.resource_access || {}
-        ).flatMap((r) => r.roles || []);
-        const allRoles = [...realmRoles, ...resourceRoles];
-        setRoles(allRoles);
-      }
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-      // If refresh fails, logout user
-      await logout();
+    // NextAuth automatically refreshes tokens, but we can trigger a session update
+    if (authMethod === "keycloak" && session) {
+      // Force a session update by refetching
+      await fetch("/api/auth/session", { method: "GET" });
     }
-  }, [keycloak, logout]);
+  }, [authMethod, session]);
 
   // Role checking functions
   const hasRole = (role: string): boolean => {
@@ -546,17 +511,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasAnyRole = (roleList: string[]): boolean => {
     return roleList.some((role) => roles.includes(role));
   };
-
-  // Set up token refresh interval
-  useEffect(() => {
-    if (isAuthenticated && keycloak) {
-      const interval = setInterval(() => {
-        refreshToken();
-      }, 30000); // Refresh every 30 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated, keycloak, refreshToken]);
 
   const value: AuthContextType = {
     isAuthenticated,

@@ -22,25 +22,56 @@ export async function GET(request: NextRequest) {
     const filters = searchParams.get("filters");
 
     // Build the URL with query parameters
-    let url = `${ERPNext_BASE_URL}/api/resource/Device?fields=${encodeURIComponent(fields)}`;
+    let url = `${ERPNext_BASE_URL}/api/resource/Device?fields=${encodeURIComponent(
+      fields
+    )}`;
     if (filters) {
       url += `&filters=${encodeURIComponent(filters)}`;
     }
 
-    // Forward the request to ERPNext with token in Authorization header
-    // ERPNext can accept token in Authorization header or Cookie
+    // Determine token type and format headers accordingly
+    // ERPNext accepts:
+    // 1. API Token: "Token api_key:api_secret" in Authorization header
+    // 2. Session ID: "sid" in Cookie header
+    // 3. Keycloak token: Bearer token (validated by auth hook)
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (token.startsWith("Token ")) {
+      // ERPNext API token format
+      headers["Authorization"] = token;
+    } else if (token.includes(":")) {
+      // Might be an API token without "Token " prefix, or Keycloak token
+      // Try as Bearer token first (for Keycloak), auth hook will validate
+      headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      // Likely a session ID
+      headers["Cookie"] = `sid=${token}`;
+      // Also try as Bearer token for Keycloak compatibility
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Forward the request to ERPNext
     const response = await fetch(url, {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Cookie: `sid=${token}`, // Also send as cookie for ERPNext compatibility
-      },
+      headers,
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({
-        message: "Failed to fetch devices",
-      }));
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to fetch devices" };
+
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText || "Failed to fetch devices" };
+      }
+
+      console.error(
+        `Failed to fetch devices: ${response.status} - ${errorData.message}`
+      );
+
       return NextResponse.json(
         { message: errorData.message || "Failed to fetch devices" },
         { status: response.status }
@@ -53,10 +84,10 @@ export async function GET(request: NextRequest) {
     console.error("ERPNext device proxy error:", error);
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : "Internal server error",
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       },
       { status: 500 }
     );
   }
 }
-

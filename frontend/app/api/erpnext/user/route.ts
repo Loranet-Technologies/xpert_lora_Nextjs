@@ -16,20 +16,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Forward the request to ERPNext with token in Authorization header
-    // ERPNext can accept token in Authorization header or Cookie
+    // Determine token type and format headers accordingly
+    // ERPNext accepts:
+    // 1. API Token: "Token api_key:api_secret" in Authorization header
+    // 2. Session ID: "sid" in Cookie header
+    // 3. Keycloak token: Bearer token (validated by auth hook)
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (token.startsWith("Token ")) {
+      // ERPNext API token format
+      headers["Authorization"] = token;
+    } else if (token.includes(":")) {
+      // Might be an API token without "Token " prefix, or Keycloak token
+      // Try as Bearer token first (for Keycloak), auth hook will validate
+      headers["Authorization"] = `Bearer ${token}`;
+    } else {
+      // Likely a session ID
+      headers["Cookie"] = `sid=${token}`;
+      // Also try as Bearer token for Keycloak compatibility
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    // Forward the request to ERPNext
     const response = await fetch(
       `${ERPNext_BASE_URL}/api/method/frappe.auth.get_logged_user`,
       {
         method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Cookie: `sid=${token}`, // Also send as cookie for ERPNext compatibility
-        },
+        headers,
       }
     );
 
     if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error(
+        `Failed to get logged user: ${response.status} - ${errorText}`
+      );
       return NextResponse.json(
         { message: "Not authenticated" },
         { status: response.status }
