@@ -6,10 +6,9 @@ import { useEffect, useState } from "react";
 import {
   fetchERPNextTenants,
   fetchERPNextApplications,
-  listCsApplications,
-  createCsApplication,
-  updateCsApplication,
-  deleteCsApplication,
+  createERPNextApplication,
+  updateERPNextApplication,
+  deleteERPNextApplication,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,16 +100,19 @@ export default function ApplicationsAdminPage() {
   const [selectedTenant, setSelectedTenant] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
   const [editingApp, setEditingApp] = useState<Application | null>(null);
   const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   async function loadTenants() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
       const data = (res as any).data || [];
       setTenants(data as Tenant[]);
     } catch (e: any) {
@@ -131,9 +133,16 @@ export default function ApplicationsAdminPage() {
       const res = await fetchERPNextApplications({
         fields: ["*"],
         tenant: tenantId,
+        limit: 100,
+        offset: 0,
       });
       const data = (res as any).data || [];
-      setApps(data as Application[]);
+      // Filter applications by tenant on client side as well to ensure correctness
+      // This is a safety measure in case backend filter doesn't work
+      const filteredData = data.filter(
+        (app: Application) => app.tenant === tenantId
+      );
+      setApps(filteredData as Application[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load applications");
     } finally {
@@ -155,16 +164,19 @@ export default function ApplicationsAdminPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTenant) return;
+    if (!selectedTenant || !newName.trim()) return;
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Creating applications in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the create endpoint
-      setError(
-        "Create functionality for ERPNext applications not yet implemented"
-      );
-      // await createCsApplication({ name: newName, organizationId: selectedTenant });
-      // setNewName("");
-      // await loadApps(selectedTenant);
+      await createERPNextApplication({
+        application_name: newName.trim(),
+        tenant: selectedTenant,
+        description: newDescription.trim() || undefined,
+      });
+      setNewName("");
+      setNewDescription("");
+      setSuccess("Application created successfully!");
+      await loadApps(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to create application");
     }
@@ -173,35 +185,35 @@ export default function ApplicationsAdminPage() {
   function handleEdit(app: Application) {
     setEditingApp(app);
     setEditName(app.application_name || "");
+    setEditDescription(app.description || "");
     setIsEditDialogOpen(true);
   }
 
   async function handleSaveEdit() {
-    if (!editingApp) return;
+    if (!editingApp || !editName.trim()) return;
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Updating applications in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the update endpoint
-      setError(
-        "Update functionality for ERPNext applications not yet implemented"
-      );
-      // await updateCsApplication(editingApp.name, { name: editName });
-      // await loadApps(selectedTenant);
-      // setIsEditDialogOpen(false);
-      // setEditingApp(null);
+      await updateERPNextApplication(editingApp.name, {
+        application_name: editName.trim(),
+        description: editDescription.trim() || undefined,
+      });
+      setSuccess("Application updated successfully!");
+      await loadApps(selectedTenant);
+      setIsEditDialogOpen(false);
+      setEditingApp(null);
     } catch (e: any) {
       setError(e?.message || "Failed to update application");
     }
   }
 
   async function handleDelete(app: Application) {
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Deleting applications in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the delete endpoint
-      setError(
-        "Delete functionality for ERPNext applications not yet implemented"
-      );
-      // await deleteCsApplication(app.name);
-      // await loadApps(selectedTenant);
+      await deleteERPNextApplication(app.name);
+      setSuccess("Application deleted successfully!");
+      await loadApps(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to delete application");
     }
@@ -229,8 +241,8 @@ export default function ApplicationsAdminPage() {
               Create New Application
             </CardTitle>
             <CardDescription>
-              Note: Create functionality for ERPNext applications not yet
-              implemented
+              Create a new application in ERPNext. The application will be
+              synced with ChirpStack.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -258,26 +270,36 @@ export default function ApplicationsAdminPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <form
-                onSubmit={onCreate}
-                className="flex flex-col sm:flex-row gap-4 flex-1"
-              >
-                <div className="flex-1">
-                  <Label htmlFor="app-name" className="mb-2 ">
-                    Application Name
-                  </Label>
-                  <Input
-                    id="app-name"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Enter application name"
-                    required
-                  />
+              <form onSubmit={onCreate} className="flex flex-col gap-4 flex-1">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="app-name" className="mb-2">
+                      Application Name *
+                    </Label>
+                    <Input
+                      id="app-name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Enter application name"
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="app-description" className="mb-2">
+                      Description
+                    </Label>
+                    <Input
+                      id="app-description"
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      placeholder="Enter description (optional)"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-end">
                   <Button
                     type="submit"
-                    disabled={!selectedTenant}
+                    disabled={!selectedTenant || !newName.trim()}
                     className="w-full sm:w-auto"
                   >
                     <Plus className="w-4 h-4 mr-2" />
@@ -292,6 +314,12 @@ export default function ApplicationsAdminPage() {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
@@ -426,19 +454,28 @@ export default function ApplicationsAdminPage() {
             <DialogHeader>
               <DialogTitle>Edit Application</DialogTitle>
               <DialogDescription>
-                Update the name of the application (Note: Update functionality
-                not yet implemented)
+                Update the application details. Changes will be synced with
+                ChirpStack.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-name">Application Name</Label>
+                <Label htmlFor="edit-name">Application Name *</Label>
                 <Input
                   id="edit-name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Enter application name"
-                  disabled
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Enter description (optional)"
                 />
               </div>
             </div>

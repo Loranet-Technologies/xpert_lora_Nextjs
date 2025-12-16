@@ -39,13 +39,13 @@ export async function POST(request: NextRequest) {
     // Extract token from response
     // ERPNext typically uses session cookies (sid), so we extract from Set-Cookie headers first
     let token = null;
-    
+
     // First, try to extract session ID from Set-Cookie headers (most reliable for ERPNext)
     const setCookieHeaders = response.headers.getSetCookie();
     if (setCookieHeaders && setCookieHeaders.length > 0) {
       for (const cookie of setCookieHeaders) {
         // Extract sid cookie (ERPNext session ID)
-        if (cookie.startsWith('sid=')) {
+        if (cookie.startsWith("sid=")) {
           const match = cookie.match(/sid=([^;]+)/);
           if (match && match[1]) {
             token = match[1];
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     // If no token from cookies, check response data
     if (!token) {
       if (data.message) {
-        if (typeof data.message === 'string' && data.message.length > 20) {
+        if (typeof data.message === "string" && data.message.length > 20) {
           // Likely a token if it's a long string
           token = data.message;
         } else if (data.message.token) {
@@ -77,9 +77,11 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("ERPNext login proxy error:", error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Internal server error" },
+      {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
 }
-

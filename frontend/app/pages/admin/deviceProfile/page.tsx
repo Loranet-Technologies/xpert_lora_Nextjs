@@ -6,11 +6,9 @@ import { useEffect, useState } from "react";
 import {
   fetchERPNextTenants,
   fetchERPNextDeviceProfiles,
-  listCsDeviceProfiles,
-  createCsDeviceProfile,
-  updateCsDeviceProfile,
-  deleteCsDeviceProfile,
-  getCsDeviceProfile,
+  createERPNextDeviceProfile,
+  updateERPNextDeviceProfile,
+  deleteERPNextDeviceProfile,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -88,19 +86,8 @@ type DeviceProfile = {
   metadata?: any;
 } & Record<string, any>;
 
-const REGIONS = [
-  "EU868",
-  "US915",
-  "AS923",
-  "AU915",
-  "CN470",
-  "CN779",
-  "EU433",
-  "IN865",
-  "ISM2400",
-  "KR920",
-  "RU864",
-];
+// Only AS923 is available as per requirements
+const REGIONS = ["AS923"];
 
 // Mapping from ChirpStack region enum numbers to region names
 const REGION_ENUM_TO_NAME: { [key: number]: string } = {
@@ -155,22 +142,31 @@ export default function DeviceProfileAdminPage() {
   const [selectedTenant, setSelectedTenant] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
   const [newDescription, setNewDescription] = useState("");
-  const [newRegion, setNewRegion] = useState("");
+  const [newRegion, setNewRegion] = useState("AS923");
+  const [newMacVersion, setNewMacVersion] = useState("LORAWAN_1_0_3");
+  const [newRegionalParams, setNewRegionalParams] = useState("A");
+  const [newSupportsOtaa, setNewSupportsOtaa] = useState(true);
+  const [newSupports32Bit, setNewSupports32Bit] = useState(false);
   const [editingProfile, setEditingProfile] = useState<DeviceProfile | null>(
     null
   );
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
-  const [editRegion, setEditRegion] = useState("");
+  const [editRegion, setEditRegion] = useState("AS923");
+  const [editMacVersion, setEditMacVersion] = useState("LORAWAN_1_0_3");
+  const [editRegionalParams, setEditRegionalParams] = useState("A");
+  const [editSupportsOtaa, setEditSupportsOtaa] = useState(true);
+  const [editSupports32Bit, setEditSupports32Bit] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   async function loadTenants() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
       const data = (res as any).data || [];
       setTenants(data as Tenant[]);
     } catch (e: any) {
@@ -191,9 +187,15 @@ export default function DeviceProfileAdminPage() {
       const res = await fetchERPNextDeviceProfiles({
         fields: ["*"],
         tenant: tenantId,
+        limit: 100,
+        offset: 0,
       });
       const data = (res as any).data || [];
-      setProfiles(data as DeviceProfile[]);
+      // Filter device profiles by tenant on client side as well to ensure correctness
+      const filteredData = data.filter(
+        (profile: DeviceProfile) => profile.tenant === tenantId
+      );
+      setProfiles(filteredData as DeviceProfile[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load device profiles");
     } finally {
@@ -215,25 +217,59 @@ export default function DeviceProfileAdminPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedTenant) return;
+    if (!selectedTenant || !newName.trim()) return;
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
     try {
-      // Note: Creating device profiles in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the create endpoint
-      setError(
-        "Create functionality for ERPNext device profiles not yet implemented"
-      );
-      // await createCsDeviceProfile({
-      //   name: newName,
-      //   tenantId: selectedTenant,
-      //   description: newDescription || undefined,
-      //   region: newRegion || undefined,
-      // });
-      // setNewName("");
-      // setNewDescription("");
-      // setNewRegion("");
-      // await loadProfiles(selectedTenant);
+      // ERPNext requires region values to end with \n
+      // Ensure region always ends with \n (backend validation requires it)
+      let regionValue = (newRegion || "AS923").trim();
+      if (!regionValue.endsWith("\n")) {
+        regionValue = regionValue + "\n";
+      }
+
+      const profileData: any = {
+        profile_name: newName.trim(),
+        tenant: selectedTenant,
+        region: regionValue,
+        mac_version: newMacVersion || "LORAWAN_1_0_3",
+        regional_parameters_revision: newRegionalParams || "A",
+        supports_otaa_join: newSupportsOtaa ? 1 : 0,
+        supports_32_bit_frame_counter: newSupports32Bit ? 1 : 0,
+      };
+
+      // Only include small_text if it has a value
+      if (newDescription && newDescription.trim()) {
+        profileData.small_text = newDescription.trim();
+      }
+
+      // Debug: Verify region has \n
+      console.log("Creating device profile with data:", {
+        ...profileData,
+        region_debug: `"${profileData.region}" (length: ${
+          profileData.region.length
+        }, ends with \\n: ${profileData.region.endsWith("\n")})`,
+      });
+      const result = await createERPNextDeviceProfile(profileData);
+      console.log("Device profile created successfully:", result);
+
+      setNewName("");
+      setNewDescription("");
+      setNewRegion("AS923");
+      setNewMacVersion("LORAWAN_1_0_3");
+      setNewRegionalParams("A");
+      setNewSupportsOtaa(true);
+      setNewSupports32Bit(false);
+      setSuccess("Device profile created successfully!");
+      await loadProfiles(selectedTenant);
     } catch (e: any) {
-      setError(e?.message || "Failed to create device profile");
+      console.error("Error creating device profile:", e);
+      const errorMessage =
+        e?.message || e?.error || "Failed to create device profile";
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -242,41 +278,57 @@ export default function DeviceProfileAdminPage() {
     setEditName(profile.profile_name || "");
     setEditDescription(profile.small_text || "");
     // Get first region from the region string if multiple regions exist
-    const regions = parseRegions(profile.region);
-    setEditRegion(regions.length > 0 ? regions[0] : "");
+    // Remove trailing \n if present (ERPNext stores regions with \n)
+    let regionValue = profile.region || "";
+    if (regionValue.endsWith("\n")) {
+      regionValue = regionValue.slice(0, -1);
+    }
+    const regions = parseRegions(regionValue);
+    setEditRegion(regions.length > 0 ? regions[0] : regionValue || "AS923");
+    setEditMacVersion(profile.mac_version || "LORAWAN_1_0_3");
+    setEditRegionalParams(profile.regional_parameters_revision || "A");
+    setEditSupportsOtaa(profile.supports_otaa_join === 1);
+    setEditSupports32Bit(profile.supports_32_bit_frame_counter === 1);
     setIsEditDialogOpen(true);
   }
 
   async function handleSaveEdit() {
-    if (!editingProfile) return;
+    if (!editingProfile || !editName.trim()) return;
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Updating device profiles in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the update endpoint
-      setError(
-        "Update functionality for ERPNext device profiles not yet implemented"
-      );
-      // await updateCsDeviceProfile(editingProfile.name, {
-      //   name: editName,
-      //   description: editDescription || undefined,
-      //   region: editRegion || undefined,
-      // });
-      // await loadProfiles(selectedTenant);
-      // setIsEditDialogOpen(false);
-      // setEditingProfile(null);
+      // ERPNext requires region values to end with \n
+      // Ensure region always ends with \n (backend validation requires it)
+      let regionValue = (editRegion || "AS923").trim();
+      if (!regionValue.endsWith("\n")) {
+        regionValue = regionValue + "\n";
+      }
+
+      await updateERPNextDeviceProfile(editingProfile.name, {
+        profile_name: editName.trim(),
+        region: regionValue,
+        small_text: editDescription.trim() || undefined,
+        mac_version: editMacVersion || "LORAWAN_1_0_3",
+        regional_parameters_revision: editRegionalParams || "A",
+        supports_otaa_join: editSupportsOtaa ? 1 : 0,
+        supports_32_bit_frame_counter: editSupports32Bit ? 1 : 0,
+      });
+      setSuccess("Device profile updated successfully!");
+      await loadProfiles(selectedTenant);
+      setIsEditDialogOpen(false);
+      setEditingProfile(null);
     } catch (e: any) {
       setError(e?.message || "Failed to update device profile");
     }
   }
 
   async function handleDelete(profile: DeviceProfile) {
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Deleting device profiles in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the delete endpoint
-      setError(
-        "Delete functionality for ERPNext device profiles not yet implemented"
-      );
-      // await deleteCsDeviceProfile(profile.name);
-      // await loadProfiles(selectedTenant);
+      await deleteERPNextDeviceProfile(profile.name);
+      setSuccess("Device profile deleted successfully!");
+      await loadProfiles(selectedTenant);
     } catch (e: any) {
       setError(e?.message || "Failed to delete device profile");
     }
@@ -306,8 +358,8 @@ export default function DeviceProfileAdminPage() {
               Create New Device Profile
             </CardTitle>
             <CardDescription>
-              Note: Create functionality for ERPNext device profiles not yet
-              implemented
+              Create a new device profile in ERPNext. The device profile will be
+              synced with ChirpStack.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -339,10 +391,10 @@ export default function DeviceProfileAdminPage() {
               </div>
 
               <form onSubmit={onCreate} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="profile-name" className="mb-2">
-                      Profile Name
+                      Profile Name *
                     </Label>
                     <Input
                       id="profile-name"
@@ -369,15 +421,83 @@ export default function DeviceProfileAdminPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex items-end">
-                    <Button
-                      type="submit"
-                      disabled={!selectedTenant}
-                      className="w-full"
+                  <div>
+                    <Label htmlFor="profile-mac-version" className="mb-2">
+                      MAC Version
+                    </Label>
+                    <Select
+                      value={newMacVersion}
+                      onValueChange={setNewMacVersion}
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Profile
-                    </Button>
+                      <SelectTrigger id="profile-mac-version">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="LORAWAN_1_0_0">
+                          LoRaWAN 1.0.0
+                        </SelectItem>
+                        <SelectItem value="LORAWAN_1_0_1">
+                          LoRaWAN 1.0.1
+                        </SelectItem>
+                        <SelectItem value="LORAWAN_1_0_2">
+                          LoRaWAN 1.0.2
+                        </SelectItem>
+                        <SelectItem value="LORAWAN_1_0_3">
+                          LoRaWAN 1.0.3
+                        </SelectItem>
+                        <SelectItem value="LORAWAN_1_0_4">
+                          LoRaWAN 1.0.4
+                        </SelectItem>
+                        <SelectItem value="LORAWAN_1_1_0">
+                          LoRaWAN 1.1.0
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="profile-regional-params" className="mb-2">
+                      Regional Parameters Revision
+                    </Label>
+                    <Select
+                      value={newRegionalParams}
+                      onValueChange={setNewRegionalParams}
+                    >
+                      <SelectTrigger id="profile-regional-params">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="supports-otaa"
+                      checked={newSupportsOtaa}
+                      onChange={(e) => setNewSupportsOtaa(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="supports-otaa" className="cursor-pointer">
+                      Supports OTAA (Join)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="supports-32bit"
+                      checked={newSupports32Bit}
+                      onChange={(e) => setNewSupports32Bit(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <Label htmlFor="supports-32bit" className="cursor-pointer">
+                      Supports 32-bit Frame Counter
+                    </Label>
                   </div>
                 </div>
 
@@ -392,6 +512,17 @@ export default function DeviceProfileAdminPage() {
                     placeholder="Enter profile description (optional)"
                   />
                 </div>
+
+                <div className="flex items-end">
+                  <Button
+                    type="submit"
+                    disabled={!selectedTenant || !newName.trim()}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Profile
+                  </Button>
+                </div>
               </form>
             </div>
           </CardContent>
@@ -400,6 +531,12 @@ export default function DeviceProfileAdminPage() {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
@@ -549,39 +686,118 @@ export default function DeviceProfileAdminPage() {
             <DialogHeader>
               <DialogTitle>Edit Device Profile</DialogTitle>
               <DialogDescription>
-                Update the device profile information (Note: Update
-                functionality not yet implemented)
+                Update the device profile details. Changes will be synced with
+                ChirpStack.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="edit-name">Profile Name</Label>
+                <Label htmlFor="edit-name">Profile Name *</Label>
                 <Input
                   id="edit-name"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   placeholder="Enter profile name"
-                  disabled
+                  required
                 />
               </div>
-              <div>
-                <Label htmlFor="edit-region">Region</Label>
-                <Select
-                  value={editRegion}
-                  onValueChange={setEditRegion}
-                  disabled
-                >
-                  <SelectTrigger id="edit-region">
-                    <SelectValue placeholder="Select region..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {REGIONS.map((region) => (
-                      <SelectItem key={region} value={region}>
-                        {region}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-region">Region</Label>
+                  <Select value={editRegion} onValueChange={setEditRegion}>
+                    <SelectTrigger id="edit-region">
+                      <SelectValue placeholder="Select region..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REGIONS.map((region) => (
+                        <SelectItem key={region} value={region}>
+                          {region}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-mac-version">MAC Version</Label>
+                  <Select
+                    value={editMacVersion}
+                    onValueChange={setEditMacVersion}
+                  >
+                    <SelectTrigger id="edit-mac-version">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="LORAWAN_1_0_0">
+                        LoRaWAN 1.0.0
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      <SelectItem value="LORAWAN_1_0_1">
+                        LoRaWAN 1.0.1
+                      </SelectItem>
+                      <SelectItem value="LORAWAN_1_0_2">
+                        LoRaWAN 1.0.2
+                      </SelectItem>
+                      <SelectItem value="LORAWAN_1_0_3">
+                        LoRaWAN 1.0.3
+                      </SelectItem>
+                      <SelectItem value="LORAWAN_1_0_4">
+                        LoRaWAN 1.0.4
+                      </SelectItem>
+                      <SelectItem value="LORAWAN_1_1_0">
+                        LoRaWAN 1.1.0
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="edit-regional-params">
+                    Regional Parameters Revision
+                  </Label>
+                  <Select
+                    value={editRegionalParams}
+                    onValueChange={setEditRegionalParams}
+                  >
+                    <SelectTrigger id="edit-regional-params">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="A">A</SelectItem>
+                      <SelectItem value="B">B</SelectItem>
+                      <SelectItem value="C">C</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-supports-otaa"
+                    checked={editSupportsOtaa}
+                    onChange={(e) => setEditSupportsOtaa(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label
+                    htmlFor="edit-supports-otaa"
+                    className="cursor-pointer"
+                  >
+                    Supports OTAA (Join)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="edit-supports-32bit"
+                    checked={editSupports32Bit}
+                    onChange={(e) => setEditSupports32Bit(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300"
+                  />
+                  <Label
+                    htmlFor="edit-supports-32bit"
+                    className="cursor-pointer"
+                  >
+                    Supports 32-bit Frame Counter
+                  </Label>
+                </div>
               </div>
               <div>
                 <Label htmlFor="edit-description">Description</Label>
@@ -589,8 +805,7 @@ export default function DeviceProfileAdminPage() {
                   id="edit-description"
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Enter profile description"
-                  disabled
+                  placeholder="Enter profile description (optional)"
                 />
               </div>
             </div>

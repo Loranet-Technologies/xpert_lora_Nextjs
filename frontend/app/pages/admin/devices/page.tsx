@@ -8,10 +8,9 @@ import {
   fetchERPNextApplications,
   fetchERPNextDevices,
   fetchERPNextDeviceProfiles,
-  listCsDevices,
-  createCsDevice,
-  updateCsDevice,
-  deleteCsDevice,
+  createERPNextDevice,
+  updateERPNextDevice,
+  deleteERPNextDevice,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,6 +54,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +123,8 @@ export default function DevicesAdminPage() {
   const [selectedProfile, setSelectedProfile] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: "", devEui: "" });
+  const [success, setSuccess] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: "", devEui: "", description: "" });
 
   function generateRandomDevEui() {
     const chars = "0123456789abcdef";
@@ -138,10 +139,16 @@ export default function DevicesAdminPage() {
     open: boolean;
     device: Device | null;
     name: string;
+    description: string;
+    status: string;
+    deviceProfile: string;
   }>({
     open: false,
     device: null,
     name: "",
+    description: "",
+    status: "Active",
+    deviceProfile: "",
   });
 
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -156,7 +163,7 @@ export default function DevicesAdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetchERPNextTenants({ fields: ["*"] });
+      const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
       const data = (res as any).data || [];
       setTenants(data as Tenant[]);
     } catch (e: any) {
@@ -214,11 +221,16 @@ export default function DevicesAdminPage() {
     setError(null);
     try {
       const res = await fetchERPNextDevices({
-        fields: ["*"],
         application: appId,
+        limit: 100,
+        offset: 0,
       });
       const data = (res as any).data || [];
-      setDevices(data as Device[]);
+      // Filter devices by application on client side as well to ensure correctness
+      const filteredData = data.filter(
+        (device: Device) => device.application === appId
+      );
+      setDevices(filteredData as Device[]);
     } catch (e: any) {
       setError(e?.message || "Failed to load devices");
     } finally {
@@ -248,27 +260,35 @@ export default function DevicesAdminPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedApp || !selectedProfile) {
-      setError("Please select both application and device profile");
+    if (
+      !selectedApp ||
+      !selectedProfile ||
+      !form.name.trim() ||
+      !form.devEui.trim()
+    ) {
+      setError("Please fill in all required fields");
       return;
     }
 
     // Clear any previous errors
     setError(null);
+    setSuccess(null);
+    setLoading(true);
 
     try {
-      // Note: Creating devices in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the create endpoint
-      setError("Create functionality for ERPNext devices not yet implemented");
-      // await createCsDevice({
-      //   name: form.name,
-      //   devEui: form.devEui,
-      //   applicationId: selectedApp,
-      //   deviceProfileId: selectedProfile,
-      // });
-      // setForm({ name: "", devEui: "" });
-      // setSelectedProfile(""); // Reset profile selection
-      // await loadDevices(selectedApp);
+      await createERPNextDevice({
+        device_name: form.name.trim(),
+        dev_eui: form.devEui.trim(),
+        application: selectedApp,
+        device_profile: selectedProfile,
+        status: "Active",
+        description: form.description.trim() || undefined,
+      });
+
+      setForm({ name: "", devEui: "", description: "" });
+      setSelectedProfile(""); // Reset profile selection
+      setSuccess("Device created successfully!");
+      await loadDevices(selectedApp);
     } catch (e: any) {
       console.error("Device creation error:", e);
 
@@ -276,45 +296,69 @@ export default function DevicesAdminPage() {
       let errorMessage = "Failed to create device";
       if (e?.message?.includes("already exists")) {
         errorMessage = `Device with DevEUI "${form.devEui}" already exists. Please use a different DevEUI.`;
-      } else if (e?.message?.includes("Device profile ID is required")) {
+      } else if (e?.message?.includes("Device profile")) {
         errorMessage = "Please select a device profile";
+      } else if (e?.message?.includes("Application")) {
+        errorMessage = "Please select an application";
       } else if (e?.message) {
         errorMessage = e.message;
       }
 
       setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleEdit() {
     if (!editDialog.device || !editDialog.name.trim()) return;
 
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
     try {
-      // Note: Updating devices in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the update endpoint
-      setError("Update functionality for ERPNext devices not yet implemented");
-      // await updateCsDevice(editDialog.device.dev_eui || editDialog.device.name, {
-      //   name: editDialog.name,
-      // });
-      // await loadDevices(selectedApp);
-      // setEditDialog({ open: false, device: null, name: "" });
+      await updateERPNextDevice(editDialog.device.name, {
+        device_name: editDialog.name.trim(),
+        description: editDialog.description.trim() || undefined,
+        status: editDialog.status,
+        device_profile:
+          editDialog.deviceProfile || editDialog.device.device_profile,
+      });
+
+      setSuccess("Device updated successfully!");
+      await loadDevices(selectedApp);
+      setEditDialog({
+        open: false,
+        device: null,
+        name: "",
+        description: "",
+        status: "Active",
+        deviceProfile: "",
+      });
     } catch (e: any) {
       setError(e?.message || "Failed to update device");
+    } finally {
+      setLoading(false);
     }
   }
 
   async function handleDelete() {
     if (!deleteDialog.device) return;
 
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
     try {
-      // Note: Deleting devices in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the delete endpoint
-      setError("Delete functionality for ERPNext devices not yet implemented");
-      // await deleteCsDevice(deleteDialog.device.dev_eui || deleteDialog.device.name);
-      // await loadDevices(selectedApp);
-      // setDeleteDialog({ open: false, device: null });
+      await deleteERPNextDevice(deleteDialog.device.name);
+      setSuccess("Device deleted successfully!");
+      await loadDevices(selectedApp);
+      setDeleteDialog({ open: false, device: null });
     } catch (e: any) {
       setError(e?.message || "Failed to delete device");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -335,10 +379,13 @@ export default function DevicesAdminPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Device Selection & Creation</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Create New Device
+            </CardTitle>
             <CardDescription>
-              Select a tenant and application to view devices (Note: Create
-              functionality not yet implemented)
+              Create a new device in ERPNext. The device will be synced with
+              ChirpStack.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -409,7 +456,7 @@ export default function DevicesAdminPage() {
             <form onSubmit={onCreate} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="device-name">Device Name</Label>
+                  <Label htmlFor="device-name">Device Name *</Label>
                   <Input
                     id="device-name"
                     placeholder="Enter device name..."
@@ -419,17 +466,19 @@ export default function DevicesAdminPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="dev-eui">DevEUI</Label>
+                  <Label htmlFor="dev-eui">DevEUI *</Label>
                   <div className="flex gap-2">
                     <Input
                       id="dev-eui"
-                      placeholder="Enter DevEUI..."
+                      placeholder="Enter DevEUI (16 hex characters)..."
                       value={form.devEui}
                       onChange={(e) =>
                         setForm({ ...form, devEui: e.target.value })
                       }
                       required
                       className="flex-1"
+                      pattern="[0-9a-fA-F]{16}"
+                      maxLength={16}
                     />
                     <Button
                       type="button"
@@ -441,15 +490,34 @@ export default function DevicesAdminPage() {
                     </Button>
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="device-description">Description</Label>
+                  <Input
+                    id="device-description"
+                    placeholder="Enter description (optional)..."
+                    value={form.description}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <Button
-                type="submit"
-                disabled={!selectedApp || !selectedProfile}
-                className="w-full md:w-auto"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Device
-              </Button>
+              <div className="flex items-end">
+                <Button
+                  type="submit"
+                  disabled={
+                    !selectedApp ||
+                    !selectedProfile ||
+                    !form.name.trim() ||
+                    !form.devEui.trim() ||
+                    loading
+                  }
+                  className="w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Device
+                </Button>
+              </div>
             </form>
           </CardContent>
         </Card>
@@ -457,6 +525,12 @@ export default function DevicesAdminPage() {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
@@ -541,30 +615,57 @@ export default function DevicesAdminPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() =>
+                                onClick={() => {
                                   setEditDialog({
                                     open: true,
                                     device: d,
                                     name: d.device_name || "",
-                                  })
-                                }
+                                    description: d.description || "",
+                                    status: d.status || "Active",
+                                    deviceProfile: d.device_profile || "",
+                                  });
+                                }}
                               >
                                 <Edit className="h-4 w-4 mr-1" />
-                                Rename
+                                Edit
                               </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() =>
-                                  setDeleteDialog({
-                                    open: true,
-                                    device: d,
-                                  })
-                                }
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Delete
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete Device
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "
+                                      {d.device_name || d.name}" (DevEUI:{" "}
+                                      {d.dev_eui || d.name})? This action cannot
+                                      be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        setDeleteDialog({
+                                          open: true,
+                                          device: d,
+                                        });
+                                        setTimeout(() => handleDelete(), 0);
+                                      }}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -583,71 +684,83 @@ export default function DevicesAdminPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Rename Device</DialogTitle>
+              <DialogTitle>Edit Device</DialogTitle>
               <DialogDescription>
-                Update the name for device{" "}
-                {editDialog.device?.dev_eui || editDialog.device?.name} (Note:
-                Update functionality not yet implemented)
+                Update the device details. Changes will be synced with
+                ChirpStack.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Device Name</Label>
-              <Input
-                id="edit-name"
-                value={editDialog.name}
-                onChange={(e) =>
-                  setEditDialog({ ...editDialog, name: e.target.value })
-                }
-                placeholder="Enter new device name..."
-                disabled
-              />
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Device Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editDialog.name}
+                  onChange={(e) =>
+                    setEditDialog({ ...editDialog, name: e.target.value })
+                  }
+                  placeholder="Enter device name..."
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editDialog.description}
+                  onChange={(e) =>
+                    setEditDialog({
+                      ...editDialog,
+                      description: e.target.value,
+                    })
+                  }
+                  placeholder="Enter description (optional)..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select
+                  value={editDialog.status}
+                  onValueChange={(value) =>
+                    setEditDialog({ ...editDialog, status: value })
+                  }
+                >
+                  <SelectTrigger id="edit-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Disabled">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() =>
-                  setEditDialog({ open: false, device: null, name: "" })
+                  setEditDialog({
+                    open: false,
+                    device: null,
+                    name: "",
+                    description: "",
+                    status: "Active",
+                    deviceProfile: "",
+                  })
                 }
               >
                 Cancel
               </Button>
-              <Button onClick={handleEdit} disabled={!editDialog.name.trim()}>
+              <Button
+                onClick={handleEdit}
+                disabled={!editDialog.name.trim() || loading}
+              >
                 Save Changes
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-
-        <AlertDialog
-          open={deleteDialog.open}
-          onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
-        >
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete Device</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete device "
-                {deleteDialog.device?.device_name || deleteDialog.device?.name}"
-                ({deleteDialog.device?.dev_eui || deleteDialog.device?.name})?
-                This action cannot be undone. (Note: Delete functionality not
-                yet implemented)
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                onClick={() => setDeleteDialog({ open: false, device: null })}
-              >
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Delete Device
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
       </div>
     </div>
   );

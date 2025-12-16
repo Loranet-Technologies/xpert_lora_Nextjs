@@ -1,4 +1,92 @@
 import { apiClient } from "./apiClient";
+import Cookies from "js-cookie";
+
+// Helper function to get ERPNext token, with fallback to Keycloak token
+async function getERPNextToken(): Promise<string | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  // First, try to get ERPNext token from localStorage
+  let token = localStorage.getItem("erpnext_token");
+  if (token) {
+    return token;
+  }
+
+  // Try to get from cookies
+  const cookies = document.cookie.split(";");
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split("=");
+    if (name === "erpnext_token") {
+      token = value;
+      if (token) {
+        // Also store in localStorage for consistency
+        localStorage.setItem("erpnext_token", token);
+        return token;
+      }
+    }
+  }
+
+  // Fallback: Try to get Keycloak token and authenticate with ERPNext
+  // Get Keycloak token from NextAuth session
+  try {
+    const sessionResponse = await fetch("/api/auth/session");
+    if (sessionResponse.ok) {
+      const session = await sessionResponse.json();
+      if (session?.accessToken) {
+        // Try to authenticate with ERPNext using Keycloak token via SSO
+        try {
+          const erpnextLoginResponse = await fetch(
+            "/api/erpnext/login-with-keycloak",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ keycloakToken: session.accessToken }),
+              credentials: "include",
+            }
+          );
+
+          if (erpnextLoginResponse.ok) {
+            const data = await erpnextLoginResponse.json();
+            if (data.token) {
+              // Store the ERPNext token for future use
+              localStorage.setItem("erpnext_token", data.token);
+              Cookies.set("erpnext_token", data.token, { expires: 7 });
+              localStorage.setItem("erpnext_session_active", "true");
+
+              // Also store API credentials if available
+              if (data.api_key) {
+                localStorage.setItem("erpnext_api_key", data.api_key);
+              }
+              if (data.api_secret) {
+                localStorage.setItem("erpnext_api_secret", data.api_secret);
+              }
+
+              return data.token;
+            }
+          } else {
+            // SSO login failed, but we can still use Keycloak token
+            // The ERPNext auth hook should validate it
+            console.warn(
+              "ERPNext SSO login failed, using Keycloak token directly"
+            );
+            return session.accessToken;
+          }
+        } catch (error) {
+          console.warn("Failed to get ERPNext token with Keycloak:", error);
+          // Fallback to Keycloak token - auth hook should handle it
+          return session.accessToken;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to get session:", error);
+  }
+
+  return null;
+}
 
 export async function fetchUplinks(params?: {
   limit?: number;
@@ -398,29 +486,19 @@ export async function loginWithERPNext(credentials: {
   }
 }
 
-// ERPNext Tenant API - Fetch tenants from ERPNext
-export async function fetchERPNextTenants(params?: { fields?: string[] }) {
+// ERPNext Tenant API - List tenants from ERPNext
+export async function fetchERPNextTenants(params?: {
+  limit?: number;
+  offset?: number;
+  filters?: string;
+}) {
   try {
     // Use Next.js API route as proxy to avoid CORS issues
-    const fields = params?.fields || ["*"];
-    const fieldsParam = JSON.stringify(fields);
+    const limit = params?.limit || 20;
+    const offset = params?.offset || 0;
 
-    // Get ERPNext token from localStorage or cookies
-    let token: string | null = null;
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("erpnext_token");
-      if (!token) {
-        // Try to get from cookies
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "erpnext_token") {
-            token = value;
-            break;
-          }
-        }
-      }
-    }
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
@@ -428,18 +506,21 @@ export async function fetchERPNextTenants(params?: { fields?: string[] }) {
       );
     }
 
+    // Build query parameters
+    let queryParams = `limit=${limit}&offset=${offset}`;
+    if (params?.filters) {
+      queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+
     // Use fetch directly to include ERPNext token in Authorization header
-    const response = await fetch(
-      `/api/erpnext/tenant?fields=${encodeURIComponent(fieldsParam)}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        credentials: "include",
-      }
-    );
+    const response = await fetch(`/api/erpnext/tenant?${queryParams}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
@@ -458,33 +539,186 @@ export async function fetchERPNextTenants(params?: { fields?: string[] }) {
   }
 }
 
+// ERPNext Tenant API - Get a single tenant by ID
+export async function getERPNextTenant(tenantId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/tenant/${tenantId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch tenant",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to get ERPNext tenant:", error);
+    throw error;
+  }
+}
+
+// ERPNext Tenant API - Create a new tenant
+export async function createERPNextTenant(data: {
+  tenant_name: string;
+  description?: string;
+  can_have_gateways?: number;
+  max_gateway_count?: number;
+  max_device_count?: number;
+}) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch("/api/erpnext/tenant", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to create tenant",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to create ERPNext tenant:", error);
+    throw error;
+  }
+}
+
+// ERPNext Tenant API - Update a tenant
+export async function updateERPNextTenant(
+  tenantId: string,
+  data: {
+    tenant_name?: string;
+    description?: string;
+    can_have_gateways?: number;
+    max_gateway_count?: number;
+    max_device_count?: number;
+  }
+) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/tenant/${tenantId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to update tenant",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to update ERPNext tenant:", error);
+    throw error;
+  }
+}
+
+// ERPNext Tenant API - Delete a tenant
+export async function deleteERPNextTenant(tenantId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/tenant/${tenantId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to delete tenant",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to delete ERPNext tenant:", error);
+    throw error;
+  }
+}
+
 // ERPNext Application API - Fetch applications from ERPNext
 export async function fetchERPNextApplications(params?: {
   fields?: string[];
   filters?: string;
   tenant?: string;
+  limit?: number;
+  offset?: number;
 }) {
   try {
-    // Use Next.js API route as proxy to avoid CORS issues
-    const fields = params?.fields || ["*"];
-    const fieldsParam = JSON.stringify(fields);
-
-    // Get ERPNext token from localStorage or cookies
-    let token: string | null = null;
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("erpnext_token");
-      if (!token) {
-        // Try to get from cookies
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "erpnext_token") {
-            token = value;
-            break;
-          }
-        }
-      }
-    }
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
@@ -493,7 +727,10 @@ export async function fetchERPNextApplications(params?: {
     }
 
     // Build query parameters
-    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    const limit = params?.limit || 20;
+    const offset = params?.offset || 0;
+    let queryParams = `limit=${limit}&offset=${offset}`;
+    
     if (params?.tenant) {
       // Filter by tenant if provided
       const filters = JSON.stringify([["tenant", "=", params.tenant]]);
@@ -529,33 +766,184 @@ export async function fetchERPNextApplications(params?: {
   }
 }
 
+// ERPNext Application API - Get a single application by ID
+export async function getERPNextApplication(applicationId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/application/${applicationId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch application",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to get ERPNext application:", error);
+    throw error;
+  }
+}
+
+// ERPNext Application API - Create a new application
+export async function createERPNextApplication(data: {
+  application_name: string;
+  tenant: string;
+  description?: string;
+  metadata?: any;
+}) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch("/api/erpnext/application", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to create application",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to create ERPNext application:", error);
+    throw error;
+  }
+}
+
+// ERPNext Application API - Update an application
+export async function updateERPNextApplication(
+  applicationId: string,
+  data: {
+    application_name?: string;
+    tenant?: string;
+    description?: string;
+    metadata?: any;
+  }
+) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/application/${applicationId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to update application",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to update ERPNext application:", error);
+    throw error;
+  }
+}
+
+// ERPNext Application API - Delete an application
+export async function deleteERPNextApplication(applicationId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/application/${applicationId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to delete application",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to delete ERPNext application:", error);
+    throw error;
+  }
+}
+
 // ERPNext Device Profile API - Fetch device profiles from ERPNext
 export async function fetchERPNextDeviceProfiles(params?: {
   fields?: string[];
   filters?: string;
   tenant?: string;
+  limit?: number;
+  offset?: number;
 }) {
   try {
-    // Use Next.js API route as proxy to avoid CORS issues
-    const fields = params?.fields || ["*"];
-    const fieldsParam = JSON.stringify(fields);
-
-    // Get ERPNext token from localStorage or cookies
-    let token: string | null = null;
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("erpnext_token");
-      if (!token) {
-        // Try to get from cookies
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "erpnext_token") {
-            token = value;
-            break;
-          }
-        }
-      }
-    }
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
@@ -564,10 +952,14 @@ export async function fetchERPNextDeviceProfiles(params?: {
     }
 
     // Build query parameters
-    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    const limit = params?.limit || 20;
+    const offset = params?.offset || 0;
+    let queryParams = `limit=${limit}&offset=${offset}`;
+    
     if (params?.tenant) {
       // Filter by tenant if provided
-      const filters = JSON.stringify([["tenant", "=", params.tenant]]);
+      const filterArray = [["tenant", "=", params.tenant]];
+      const filters = JSON.stringify(filterArray);
       queryParams += `&filters=${encodeURIComponent(filters)}`;
     } else if (params?.filters) {
       queryParams += `&filters=${encodeURIComponent(params.filters)}`;
@@ -600,33 +992,216 @@ export async function fetchERPNextDeviceProfiles(params?: {
   }
 }
 
+// ERPNext Device Profile API - Get a single device profile by ID
+export async function getERPNextDeviceProfile(deviceProfileId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch device profile",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to get ERPNext device profile:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device Profile API - Create a new device profile
+export async function createERPNextDeviceProfile(data: {
+  profile_name: string;
+  tenant: string;
+  region?: string;
+  small_text?: string;
+  mac_version?: string;
+  regional_parameters_revision?: string;
+  supports_otaa_join?: number;
+  supports_32_bit_frame_counter?: number;
+  metadata?: any;
+}) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch("/api/erpnext/device-profile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to create device profile" };
+      
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { message: errorText || "Failed to create device profile" };
+      }
+      
+      // Extract the actual error message
+      const errorMessage =
+        errorData.message ||
+        errorData.exc_message ||
+        `HTTP error! status: ${response.status}`;
+      
+      console.error("Device profile creation error:", {
+        status: response.status,
+        errorData,
+        errorText,
+      });
+      
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to create ERPNext device profile:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device Profile API - Update a device profile
+export async function updateERPNextDeviceProfile(
+  deviceProfileId: string,
+  data: {
+    profile_name?: string;
+    tenant?: string;
+    region?: string;
+    small_text?: string;
+    mac_version?: string;
+    regional_parameters_revision?: string;
+    supports_otaa_join?: number;
+    supports_32_bit_frame_counter?: number;
+    metadata?: any;
+  }
+) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to update device profile",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to update ERPNext device profile:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device Profile API - Delete a device profile
+export async function deleteERPNextDeviceProfile(deviceProfileId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to delete device profile",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to delete ERPNext device profile:", error);
+    throw error;
+  }
+}
+
 // ERPNext Device API - Fetch devices from ERPNext
 export async function fetchERPNextDevices(params?: {
   fields?: string[];
   filters?: string;
   application?: string;
+  limit?: number;
+  offset?: number;
 }) {
   try {
     // Use Next.js API route as proxy to avoid CORS issues
     const fields = params?.fields || ["*"];
     const fieldsParam = JSON.stringify(fields);
+    const limit = params?.limit || 20;
+    const offset = params?.offset || 0;
 
-    // Get ERPNext token from localStorage or cookies
-    let token: string | null = null;
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("erpnext_token");
-      if (!token) {
-        // Try to get from cookies
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "erpnext_token") {
-            token = value;
-            break;
-          }
-        }
-      }
-    }
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
@@ -635,7 +1210,7 @@ export async function fetchERPNextDevices(params?: {
     }
 
     // Build query parameters
-    let queryParams = `fields=${encodeURIComponent(fieldsParam)}`;
+    let queryParams = `fields=${encodeURIComponent(fieldsParam)}&limit=${limit}&offset=${offset}`;
     if (params?.application) {
       // Filter by application if provided
       const filters = JSON.stringify([
@@ -673,6 +1248,194 @@ export async function fetchERPNextDevices(params?: {
   }
 }
 
+// ERPNext Device API - Get a single device by ID
+export async function getERPNextDevice(deviceId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device/${deviceId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to fetch device",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to get ERPNext device:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device API - Create a new device
+export async function createERPNextDevice(data: {
+  device_name: string;
+  dev_eui: string;
+  application: string;
+  device_profile: string;
+  status?: string;
+  description?: string;
+  metadata?: any;
+}) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch("/api/erpnext/device", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to create device" };
+
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: errorText || "Failed to create device" };
+      }
+
+      const errorMessage =
+        errorData.message ||
+        errorData.exc_message ||
+        `HTTP ${response.status}: ${errorText}`;
+
+      console.error("Device creation error:", {
+        status: response.status,
+        errorMessage,
+        errorData,
+      });
+
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to create ERPNext device:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device API - Update a device
+export async function updateERPNextDevice(
+  deviceId: string,
+  data: {
+    device_name?: string;
+    dev_eui?: string;
+    application?: string;
+    device_profile?: string;
+    status?: string;
+    description?: string;
+    metadata?: any;
+  }
+) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device/${deviceId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to update device",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to update ERPNext device:", error);
+    throw error;
+  }
+}
+
+// ERPNext Device API - Delete a device
+export async function deleteERPNextDevice(deviceId: string) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/device/${deviceId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to delete device",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to delete ERPNext device:", error);
+    throw error;
+  }
+}
+
 // ERPNext Gateway API - Fetch gateways from ERPNext
 export async function fetchERPNextGateways(params?: {
   fields?: string[];
@@ -684,22 +1447,8 @@ export async function fetchERPNextGateways(params?: {
     const fields = params?.fields || ["*"];
     const fieldsParam = JSON.stringify(fields);
 
-    // Get ERPNext token from localStorage or cookies
-    let token: string | null = null;
-    if (typeof window !== "undefined") {
-      token = localStorage.getItem("erpnext_token");
-      if (!token) {
-        // Try to get from cookies
-        const cookies = document.cookie.split(";");
-        for (const cookie of cookies) {
-          const [name, value] = cookie.trim().split("=");
-          if (name === "erpnext_token") {
-            token = value;
-            break;
-          }
-        }
-      }
-    }
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(

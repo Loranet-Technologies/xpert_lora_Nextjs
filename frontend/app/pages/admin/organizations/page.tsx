@@ -4,11 +4,10 @@ import type React from "react";
 
 import { useEffect, useState } from "react";
 import {
-  listOrganizations,
-  createOrganization,
-  updateOrganization,
-  deleteOrganization,
   fetchERPNextTenants,
+  createERPNextTenant,
+  updateERPNextTenant,
+  deleteERPNextTenant,
 } from "../../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,20 +71,53 @@ export default function OrganizationsAdminPage() {
   const [items, setItems] = useState<Tenant[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [newName, setNewName] = useState("");
+  const [success, setSuccess] = useState<string | null>(null);
+  
+  // Create form state
+  const [newTenantName, setNewTenantName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newCanHaveGateways, setNewCanHaveGateways] = useState(false);
+  const [newMaxGatewayCount, setNewMaxGatewayCount] = useState<number | undefined>();
+  const [newMaxDeviceCount, setNewMaxDeviceCount] = useState<number | undefined>();
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  // Edit form state
   const [editingOrg, setEditingOrg] = useState<Tenant | null>(null);
-  const [editName, setEditName] = useState("");
+  const [editTenantName, setEditTenantName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editCanHaveGateways, setEditCanHaveGateways] = useState(false);
+  const [editMaxGatewayCount, setEditMaxGatewayCount] = useState<number | undefined>();
+  const [editMaxDeviceCount, setEditMaxDeviceCount] = useState<number | undefined>();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   async function reload() {
     setLoading(true);
     setError(null);
+    setSuccess(null);
     try {
-      const res = await fetchERPNextTenants({ fields: ["*"] });
-      // ERPNext returns { data: [...] }
-      const data = (res as any).data || [];
-      setItems(data as Tenant[]);
+      const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
+      // API returns { data: [...], total: number } or { message: { data: [...], total: number } }
+      let data: Tenant[] = [];
+      
+      if (res) {
+        // Handle direct response
+        if (Array.isArray(res)) {
+          data = res;
+        } else if (res.data && Array.isArray(res.data)) {
+          data = res.data;
+        } else if (res.message) {
+          // Handle wrapped response
+          if (Array.isArray(res.message)) {
+            data = res.message;
+          } else if (res.message.data && Array.isArray(res.message.data)) {
+            data = res.message.data;
+          }
+        }
+      }
+      
+      setItems(data);
     } catch (e: any) {
+      console.error("Failed to load tenants:", e);
       setError(e?.message || "Failed to load organizations");
     } finally {
       setLoading(false);
@@ -98,48 +130,91 @@ export default function OrganizationsAdminPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Creating tenants in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the create endpoint
-      setError("Create functionality for ERPNext tenants not yet implemented");
-      // await createOrganization({ name: newName });
-      // setNewName("");
-      // await reload();
+      const tenantData: any = {
+        tenant_name: newTenantName,
+        description: newDescription || undefined,
+        can_have_gateways: newCanHaveGateways ? 1 : 0,
+      };
+      
+      if (newMaxGatewayCount !== undefined && newMaxGatewayCount !== null) {
+        tenantData.max_gateway_count = newMaxGatewayCount;
+      }
+      if (newMaxDeviceCount !== undefined && newMaxDeviceCount !== null) {
+        tenantData.max_device_count = newMaxDeviceCount;
+      }
+      
+      await createERPNextTenant(tenantData);
+      
+      // Reset form
+      setNewTenantName("");
+      setNewDescription("");
+      setNewCanHaveGateways(false);
+      setNewMaxGatewayCount(undefined);
+      setNewMaxDeviceCount(undefined);
+      setIsCreateDialogOpen(false);
+      setSuccess("Tenant created successfully!");
+      
+      await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to create organization");
+      setError(e?.message || "Failed to create tenant");
     }
   }
 
-  async function onUpdate(id: string, updates: { name?: string }) {
+  async function onUpdate() {
+    if (!editingOrg) return;
+    
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Updating tenants in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the update endpoint
-      setError("Update functionality for ERPNext tenants not yet implemented");
-      // await updateOrganization(id, updates);
-      // setIsEditDialogOpen(false);
-      // setEditingOrg(null);
-      // await reload();
+      const updates: any = {
+        tenant_name: editTenantName,
+        description: editDescription || undefined,
+        can_have_gateways: editCanHaveGateways ? 1 : 0,
+      };
+      
+      if (editMaxGatewayCount !== undefined && editMaxGatewayCount !== null) {
+        updates.max_gateway_count = editMaxGatewayCount;
+      }
+      if (editMaxDeviceCount !== undefined && editMaxDeviceCount !== null) {
+        updates.max_device_count = editMaxDeviceCount;
+      }
+      
+      await updateERPNextTenant(editingOrg.name, updates);
+      
+      setIsEditDialogOpen(false);
+      setEditingOrg(null);
+      setSuccess("Tenant updated successfully!");
+      
+      await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to update organization");
+      setError(e?.message || "Failed to update tenant");
     }
   }
 
   function openEditDialog(org: Tenant) {
     setEditingOrg(org);
-    setEditName(org.tenant_name || "");
+    setEditTenantName(org.tenant_name || "");
+    setEditDescription(org.description || "");
+    setEditCanHaveGateways(org.can_have_gateways === 1);
+    setEditMaxGatewayCount(org.max_gateway_count);
+    setEditMaxDeviceCount(org.max_device_count);
     setIsEditDialogOpen(true);
   }
 
   async function onDelete(id: string) {
-    if (!confirm("Delete organization?")) return;
+    if (!confirm("Are you sure you want to delete this tenant? This action cannot be undone.")) return;
+    
+    setError(null);
+    setSuccess(null);
     try {
-      // Note: Deleting tenants in ERPNext would require a different API endpoint
-      // For now, we'll show an error or you can implement the delete endpoint
-      setError("Delete functionality for ERPNext tenants not yet implemented");
-      // await deleteOrganization(id);
-      // await reload();
+      await deleteERPNextTenant(id);
+      setSuccess("Tenant deleted successfully!");
+      await reload();
     } catch (e: any) {
-      setError(e?.message || "Failed to delete organization");
+      setError(e?.message || "Failed to delete tenant");
     }
   }
 
@@ -158,42 +233,23 @@ export default function OrganizationsAdminPage() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              Create New Tenant
-            </CardTitle>
-            <CardDescription>
-              Note: Create functionality for ERPNext tenants not yet implemented
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={onCreate}
-              className="flex flex-col gap-4 sm:flex-row sm:items-end"
-            >
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="name">Tenant Name</Label>
-                <Input
-                  id="name"
-                  placeholder="Enter tenant name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Tenant
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between">
+          <div></div>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create New Tenant
+          </Button>
+        </div>
 
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {success && (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
@@ -302,22 +358,146 @@ export default function OrganizationsAdminPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
+        {/* Create Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit Organization</DialogTitle>
+              <DialogTitle>Create New Tenant</DialogTitle>
               <DialogDescription>
-                Update the organization details below.
+                Create a new tenant in ERPNext. The tenant will be synced with ChirpStack.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={onCreate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-tenant-name">Tenant Name *</Label>
+                <Input
+                  id="new-tenant-name"
+                  value={newTenantName}
+                  onChange={(e) => setNewTenantName(e.target.value)}
+                  placeholder="Enter tenant name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-description">Description</Label>
+                <Input
+                  id="new-description"
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="new-can-have-gateways"
+                  checked={newCanHaveGateways}
+                  onChange={(e) => setNewCanHaveGateways(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="new-can-have-gateways" className="cursor-pointer">
+                  Can Have Gateways
+                </Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-max-gateway-count">Max Gateway Count</Label>
+                <Input
+                  id="new-max-gateway-count"
+                  type="number"
+                  value={newMaxGatewayCount || ""}
+                  onChange={(e) => setNewMaxGatewayCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="Enter max gateway count (optional)"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-max-device-count">Max Device Count</Label>
+                <Input
+                  id="new-max-device-count"
+                  type="number"
+                  value={newMaxDeviceCount || ""}
+                  onChange={(e) => setNewMaxDeviceCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="Enter max device count (optional)"
+                  min="0"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  Create Tenant
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Tenant</DialogTitle>
+              <DialogDescription>
+                Update the tenant details below. Changes will be synced with ChirpStack.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-name">Organization Name</Label>
+                <Label htmlFor="edit-tenant-name">Tenant Name *</Label>
                 <Input
-                  id="edit-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Enter organization name"
+                  id="edit-tenant-name"
+                  value={editTenantName}
+                  onChange={(e) => setEditTenantName(e.target.value)}
+                  placeholder="Enter tenant name"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-can-have-gateways"
+                  checked={editCanHaveGateways}
+                  onChange={(e) => setEditCanHaveGateways(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                <Label htmlFor="edit-can-have-gateways" className="cursor-pointer">
+                  Can Have Gateways
+                </Label>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-max-gateway-count">Max Gateway Count</Label>
+                <Input
+                  id="edit-max-gateway-count"
+                  type="number"
+                  value={editMaxGatewayCount || ""}
+                  onChange={(e) => setEditMaxGatewayCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="Enter max gateway count (optional)"
+                  min="0"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-max-device-count">Max Device Count</Label>
+                <Input
+                  id="edit-max-device-count"
+                  type="number"
+                  value={editMaxDeviceCount || ""}
+                  onChange={(e) => setEditMaxDeviceCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  placeholder="Enter max device count (optional)"
+                  min="0"
                 />
               </div>
             </div>
@@ -328,14 +508,7 @@ export default function OrganizationsAdminPage() {
               >
                 Cancel
               </Button>
-              <Button
-                onClick={() =>
-                  editingOrg &&
-                  onUpdate(editingOrg.id, {
-                    name: editName,
-                  })
-                }
-              >
+              <Button onClick={onUpdate}>
                 Save Changes
               </Button>
             </DialogFooter>
