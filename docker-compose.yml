@@ -3,6 +3,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: frontend:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -13,9 +14,3 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:9090
       - NEXT_PUBLIC_KEYCLOAK_REALM=lorawan
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=lorawan-frontend
-    depends_on:
-      - keycloak
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next

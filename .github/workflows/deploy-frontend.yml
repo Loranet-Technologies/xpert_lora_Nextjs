@@ -10,45 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-test:
-    name: Build and Test
-    runs-on: self-hosted
-    
-    defaults:
-      run:
-        working-directory: ./frontend
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run linter
-        run: npm run lint
-        continue-on-error: true
-
-      - name: Build application
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'http://localhost:5555' }}
-          NEXT_PUBLIC_KEYCLOAK_URL: ${{ secrets.NEXT_PUBLIC_KEYCLOAK_URL || 'http://localhost:9090' }}
-          NEXT_PUBLIC_KEYCLOAK_REALM: ${{ secrets.NEXT_PUBLIC_KEYCLOAK_REALM || 'lorawan' }}
-          NEXT_PUBLIC_KEYCLOAK_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'lorawan-frontend' }}
-
   deploy:
-    name: Deploy to Server
+    name: Build and Deploy
     runs-on: self-hosted
-    needs: build-and-test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
       - name: Checkout code
@@ -58,7 +22,6 @@ jobs:
         run: |
           docker compose build frontend
           docker compose up -d frontend
-          docker system prune -f
 
       - name: Deployment Summary
         run: |
@@ -67,3 +30,4 @@ jobs:
           echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Status:** Frontend deployed via docker-compose" >> $GITHUB_STEP_SUMMARY
+
