@@ -1,81 +1,9 @@
-services:
-  # Database Services
-  postgres:
-    image: postgres:14-alpine
-    restart: unless-stopped
-    volumes:
-      - postgresqldata:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=chirpstack
-      - POSTGRES_PASSWORD=chirpstack
-      - POSTGRES_DB=chirpstack
-    ports:
-      - "5432:5432"
-
-  postgres-keycloak:
-    image: postgres:14-alpine
-    restart: unless-stopped
-    volumes:
-      - postgreskeycloakdata:/var/lib/postgresql/data
-    environment:
-      - POSTGRES_USER=keycloak
-      - POSTGRES_PASSWORD=keycloak
-      - POSTGRES_DB=keycloak
-    ports:
-      - "5433:5432"
-
-  mongodb:
-    image: mongo:6
-    container_name: chirpstack-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodbdata:/data/db
-    environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-      - MONGO_INITDB_DATABASE=chirpstack_backend
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    command: redis-server --save 300 1 --save 60 100 --appendonly no
-    volumes:
-      - redisdata:/data
-
-  mosquitto:
-    image: eclipse-mosquitto:2
-    restart: unless-stopped
-    ports:
-      - "1883:1883"
-
-  # Authentication Service
-  keycloak:
-    image: quay.io/keycloak/keycloak:23.0.0
-    restart: unless-stopped
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      - KC_DB=postgres
-      - KC_DB_URL=jdbc:postgresql://postgres-keycloak:5432/keycloak
-      - KC_DB_USERNAME=keycloak
-      - KC_DB_PASSWORD=keycloak
-      - KC_HOSTNAME_STRICT=false
-      - KC_HOSTNAME_STRICT_HTTPS=false
-      - KC_HTTP_ENABLED=true
-    ports:
-      - "9090:8080"
-    depends_on:
-      - postgres-keycloak
-    command:
-      - start-dev
-
-  # Application Services
+services:  
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: frontend:latest
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -86,15 +14,3 @@ services:
       - NEXT_PUBLIC_KEYCLOAK_URL=http://localhost:9090
       - NEXT_PUBLIC_KEYCLOAK_REALM=lorawan
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=lorawan-frontend
-    depends_on:
-      - keycloak
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
-
-volumes:
-  postgresqldata:
-  postgreskeycloakdata:
-  redisdata:
-  mongodbdata:

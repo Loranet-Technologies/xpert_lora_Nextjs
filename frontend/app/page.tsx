@@ -42,7 +42,7 @@ export default function Home() {
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-between">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading...</p>
@@ -58,21 +58,21 @@ export default function Home() {
 
   // Define all available tabs
   const allTabs = [
-    { id: "organizations", name: "Organizations", icon: Building2 },
-    { id: "applications", name: "Applications", icon: ClipboardList },
-    { id: "deviceProfile", name: "Device Profile", icon: Settings },
-    { id: "devices", name: "Devices", icon: Smartphone },
-    { id: "gateway", name: "Gateway", icon: Radio },
+    { id: "organizations", name: "Organizations", icon: "" },
+    { id: "applications", name: "Applications", icon: "" },
+    { id: "deviceProfile", name: "Device Profile", icon: "" },
+    { id: "devices", name: "Devices", icon: "" },
+    { id: "gateway", name: "Gateway", icon: "" },
     {
       id: "Admin-Dashboard",
       name: "Admin Dashboard",
-      icon: BarChart3,
+      icon: "",
       roles: ["admin_role"],
     },
     {
       id: "Userdashboard",
       name: "User Dashboard",
-      icon: User,
+      icon: "",
     },
   ];
 

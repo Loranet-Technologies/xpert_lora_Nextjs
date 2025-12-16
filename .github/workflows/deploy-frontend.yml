@@ -1,0 +1,40 @@
+name: Deploy Frontend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: self-hosted
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Run deploy on local server
+        run: |
+          # Navigate to the project directory
+          cd /opt/xpert_lora_Nextjs
+
+          # Pull the latest changes from the main branch
+          git pull origin main
+
+          # Clean up only unused resources (keep build cache)
+          docker system prune -f --volumes
+
+          # Build with cache and BuildKit for faster builds
+          docker-compose build
+
+          # Start the Docker containers in detached mode
+          docker-compose up -d
+
+          # Clean up dangling images after deployment (keep recent images for cache)
+          docker image prune -f
+
