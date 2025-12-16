@@ -16,18 +16,25 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Build and Deploy with Docker Compose
+      - name: Run deploy on local server
         run: |
-          docker compose build frontend
-          docker compose up -d frontend
+          # Navigate to the project directory
+          cd /opt/xpert_lora_Nextjs
 
-      - name: Deployment Summary
-        run: |
-          echo "### Deployment Complete! 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Commit:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Branch:** \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** Frontend deployed via docker-compose" >> $GITHUB_STEP_SUMMARY
+          # Pull the latest changes from the main branch
+          git pull origin main
+
+          # Clean up only unused resources (keep build cache)
+          docker system prune -f --volumes
+
+          # Build with cache and BuildKit for faster builds
+          docker-compose build
+
+          # Start the Docker containers in detached mode
+          docker-compose up -d
+
+          # Clean up dangling images after deployment (keep recent images for cache)
+          docker image prune -f
 
