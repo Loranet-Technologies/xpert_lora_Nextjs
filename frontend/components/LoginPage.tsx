@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -12,21 +12,26 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
-import { Alert } from "./ui/alert";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const { login, loginWithERPNext, isLoading, error } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Show toast for auth errors
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+    }
+  }, [error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
     
     if (!username || !password) {
-      setFormError("Please enter both username and password");
+      toast.error("Please enter both username and password");
       return;
     }
 
@@ -34,7 +39,7 @@ export default function LoginPage() {
     try {
       await loginWithERPNext(username, password);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Login failed. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -77,12 +82,6 @@ export default function LoginPage() {
                 required
               />
             </div>
-            
-            {(formError || error) && (
-              <Alert variant="destructive" className="text-sm">
-                {formError || error}
-              </Alert>
-            )}
 
             <Button
               type="submit"
