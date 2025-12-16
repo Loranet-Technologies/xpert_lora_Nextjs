@@ -20,7 +20,16 @@ import UserDashboard from "./pages/userDashaboard/page";
 import OrganizationsAdminPage from "./pages/admin/organizations/page";
 import DeviceProfile from "./pages/admin/deviceProfile/page";
 import AdminDashboardPage from "./pages/Admin-Dashbaord/page";
-import { LogOutIcon } from "lucide-react";
+import {
+  LogOutIcon,
+  Building2,
+  ClipboardList,
+  Settings,
+  Smartphone,
+  Radio,
+  BarChart3,
+  User,
+} from "lucide-react";
 import ApplicationsAdminPage from "./pages/admin/applications/page";
 import DevicesAdminPage from "./pages/admin/devices/page";
 import DeviceProfileAdminPage from "./pages/admin/deviceProfile/page";
@@ -49,21 +58,21 @@ export default function Home() {
 
   // Define all available tabs
   const allTabs = [
-    { id: "organizations", name: "Organizations", icon: "📡" },
-    { id: "applications", name: "Applications", icon: "📋" },
-    { id: "deviceProfile", name: "Device Profile", icon: "📝" },
-    { id: "devices", name: "Devices", icon: "📱" },
-    { id: "gateway", name: "Gateway", icon: "📻" },
+    { id: "organizations", name: "Organizations", icon: Building2 },
+    { id: "applications", name: "Applications", icon: ClipboardList },
+    { id: "deviceProfile", name: "Device Profile", icon: Settings },
+    { id: "devices", name: "Devices", icon: Smartphone },
+    { id: "gateway", name: "Gateway", icon: Radio },
     {
       id: "Admin-Dashboard",
       name: "Admin Dashboard",
-      icon: "📊",
+      icon: BarChart3,
       roles: ["admin_role"],
     },
     {
       id: "Userdashboard",
       name: "User Dashboard",
-      icon: "👤",
+      icon: User,
     },
   ];
 
@@ -79,18 +88,24 @@ export default function Home() {
               </h1>
               <div className="flex space-x-1">
                 {allTabs.map((tab) => (
-                  <button
+                  <div
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`px-2 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                    className={`flex flex-col items-center gap-1 px-2 py-2 rounded-md ${
                       activeTab === tab.id
                         ? "bg-blue-100 text-blue-700"
                         : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     }`}
                   >
-                    <span className="mr-2">{tab.icon}</span>
-                    {tab.name}
-                  </button>
+                    <button
+                      onClick={() => setActiveTab(tab.id)}
+                      className={` flex flex-col items-center gap-1 text-sm font-medium transition-colors duration-200 ${
+                        activeTab === tab.id ? "text-blue-700" : "text-gray-600"
+                      }`}
+                    >
+                      <tab.icon className={`h-4 w-4 `} />
+                      {tab.name}
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
