@@ -49,21 +49,21 @@ export default function Home() {
 
   // Define all available tabs
   const allTabs = [
-    { id: "organizations", name: "Organizations", icon: "📡" },
-    { id: "applications", name: "Applications", icon: "📋" },
-    { id: "deviceProfile", name: "Device Profile", icon: "📝" },
-    { id: "devices", name: "Devices", icon: "📱" },
-    { id: "gateway", name: "Gateway", icon: "📻" },
+    { id: "organizations", name: "Organizations", icon: "" },
+    { id: "applications", name: "Applications", icon: "" },
+    { id: "deviceProfile", name: "Device Profile", icon: "" },
+    { id: "devices", name: "Devices", icon: "" },
+    { id: "gateway", name: "Gateway", icon: "" },
     {
       id: "Admin-Dashboard",
       name: "Admin Dashboard",
-      icon: "📊",
+      icon: "",
       roles: ["admin_role"],
     },
     {
       id: "Userdashboard",
       name: "User Dashboard",
-      icon: "👤",
+      icon: "",
     },
   ];
 
