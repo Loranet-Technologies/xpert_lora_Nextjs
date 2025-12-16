@@ -102,7 +102,6 @@ export default function Home() {
                         activeTab === tab.id ? "text-blue-700" : "text-gray-600"
                       }`}
                     >
-                      <tab.icon className={`h-4 w-4 `} />
                       {tab.name}
                     </button>
                   </div>
