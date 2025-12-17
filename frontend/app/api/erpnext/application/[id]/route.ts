@@ -6,7 +6,7 @@ const ERPNext_BASE_URL =
 // GET - Get a single application by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -20,7 +20,8 @@ export async function GET(
       );
     }
 
-    const applicationId = params.id;
+    const { id } = await params;
+    const applicationId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -83,7 +84,7 @@ export async function GET(
 // PUT - Update an application
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -97,7 +98,8 @@ export async function PUT(
       );
     }
 
-    const applicationId = params.id;
+    const { id } = await params;
+    const applicationId = id;
     const body = await request.json();
 
     // Determine token type and format headers accordingly
@@ -161,7 +163,7 @@ export async function PUT(
 // DELETE - Delete an application
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -175,7 +177,8 @@ export async function DELETE(
       );
     }
 
-    const applicationId = params.id;
+    const { id } = await params;
+    const applicationId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {

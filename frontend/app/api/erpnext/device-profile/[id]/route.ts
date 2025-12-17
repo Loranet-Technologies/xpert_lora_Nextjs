@@ -6,7 +6,7 @@ const ERPNext_BASE_URL =
 // GET - Get a single device profile by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -20,7 +20,8 @@ export async function GET(
       );
     }
 
-    const deviceProfileId = params.id;
+    const { id } = await params;
+    const deviceProfileId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -83,7 +84,7 @@ export async function GET(
 // PUT - Update a device profile
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -97,7 +98,8 @@ export async function PUT(
       );
     }
 
-    const deviceProfileId = params.id;
+    const { id } = await params;
+    const deviceProfileId = id;
     const body = await request.json();
 
     // Ensure region always ends with \n (ERPNext validation requirement)
@@ -174,7 +176,7 @@ export async function PUT(
 // DELETE - Delete a device profile
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -188,7 +190,8 @@ export async function DELETE(
       );
     }
 
-    const deviceProfileId = params.id;
+    const { id } = await params;
+    const deviceProfileId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -247,4 +250,3 @@ export async function DELETE(
     );
   }
 }
-

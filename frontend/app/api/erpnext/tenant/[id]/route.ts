@@ -6,7 +6,7 @@ const ERPNext_BASE_URL =
 // GET - Get a single tenant by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -20,7 +20,8 @@ export async function GET(
       );
     }
 
-    const tenantId = params.id;
+    const { id } = await params;
+    const tenantId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -83,7 +84,7 @@ export async function GET(
 // PUT - Update a tenant
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -97,7 +98,8 @@ export async function PUT(
       );
     }
 
-    const tenantId = params.id;
+    const { id } = await params;
+    const tenantId = id;
     const body = await request.json();
 
     // Determine token type and format headers accordingly
@@ -161,7 +163,7 @@ export async function PUT(
 // DELETE - Delete a tenant
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -175,7 +177,8 @@ export async function DELETE(
       );
     }
 
-    const tenantId = params.id;
+    const { id } = await params;
+    const tenantId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
