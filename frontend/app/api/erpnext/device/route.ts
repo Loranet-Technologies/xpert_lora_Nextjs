@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         typeof filters === "string" ? filters : JSON.stringify(filters);
     }
 
-    let response = await fetch(
+    const response = await fetch(
       `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_devices`,
       {
         method: "POST",
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     // ERPNext API methods return { message: {...} }, unwrap it
-    let result = data.message || data;
+    const result = data.message || data;
 
     // If chirpstack_id is missing, wait a bit and fetch the device again
     // This handles cases where the sync happens asynchronously in the after_insert hook

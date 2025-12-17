@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Call the SSO login endpoint which accepts Keycloak tokens
     // The backend endpoint: /api/method/xpert_lora_app.api.sso_login
     // Accepts token in Authorization header or as access_token parameter
-    let response = await fetch(
+    const response = await fetch(
       `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.sso_login`,
       {
         method: "POST",

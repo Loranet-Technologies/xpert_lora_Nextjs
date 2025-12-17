@@ -491,6 +491,7 @@ export async function fetchERPNextTenants(params?: {
   limit?: number;
   offset?: number;
   filters?: string;
+  fields?: string | string[];
 }) {
   try {
     // Use Next.js API route as proxy to avoid CORS issues
@@ -510,6 +511,12 @@ export async function fetchERPNextTenants(params?: {
     let queryParams = `limit=${limit}&offset=${offset}`;
     if (params?.filters) {
       queryParams += `&filters=${encodeURIComponent(params.filters)}`;
+    }
+    if (params?.fields) {
+      const fieldsStr = Array.isArray(params.fields)
+        ? JSON.stringify(params.fields)
+        : params.fields;
+      queryParams += `&fields=${encodeURIComponent(fieldsStr)}`;
     }
 
     // Use fetch directly to include ERPNext token in Authorization header
@@ -730,7 +737,7 @@ export async function fetchERPNextApplications(params?: {
     const limit = params?.limit || 20;
     const offset = params?.offset || 0;
     let queryParams = `limit=${limit}&offset=${offset}`;
-    
+
     if (params?.tenant) {
       // Filter by tenant if provided
       const filters = JSON.stringify([["tenant", "=", params.tenant]]);
@@ -955,7 +962,7 @@ export async function fetchERPNextDeviceProfiles(params?: {
     const limit = params?.limit || 20;
     const offset = params?.offset || 0;
     let queryParams = `limit=${limit}&offset=${offset}`;
-    
+
     if (params?.tenant) {
       // Filter by tenant if provided
       const filterArray = [["tenant", "=", params.tenant]];
@@ -1004,14 +1011,17 @@ export async function getERPNextDeviceProfile(deviceProfileId: string) {
       );
     }
 
-    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-    });
+    const response = await fetch(
+      `/api/erpnext/device-profile/${deviceProfileId}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
@@ -1065,25 +1075,25 @@ export async function createERPNextDeviceProfile(data: {
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
       let errorData: any = { message: "Failed to create device profile" };
-      
+
       try {
         errorData = JSON.parse(errorText);
       } catch {
         errorData = { message: errorText || "Failed to create device profile" };
       }
-      
+
       // Extract the actual error message
       const errorMessage =
         errorData.message ||
         errorData.exc_message ||
         `HTTP error! status: ${response.status}`;
-      
+
       console.error("Device profile creation error:", {
         status: response.status,
         errorData,
         errorText,
       });
-      
+
       throw new Error(errorMessage);
     }
 
@@ -1120,15 +1130,18 @@ export async function updateERPNextDeviceProfile(
       );
     }
 
-    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-      body: JSON.stringify(data),
-    });
+    const response = await fetch(
+      `/api/erpnext/device-profile/${deviceProfileId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(data),
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
@@ -1159,14 +1172,17 @@ export async function deleteERPNextDeviceProfile(deviceProfileId: string) {
       );
     }
 
-    const response = await fetch(`/api/erpnext/device-profile/${deviceProfileId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      credentials: "include",
-    });
+    const response = await fetch(
+      `/api/erpnext/device-profile/${deviceProfileId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      }
+    );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
@@ -1210,7 +1226,9 @@ export async function fetchERPNextDevices(params?: {
     }
 
     // Build query parameters
-    let queryParams = `fields=${encodeURIComponent(fieldsParam)}&limit=${limit}&offset=${offset}`;
+    let queryParams = `fields=${encodeURIComponent(
+      fieldsParam
+    )}&limit=${limit}&offset=${offset}`;
     if (params?.application) {
       // Filter by application if provided
       const filters = JSON.stringify([
