@@ -9,7 +9,7 @@ import {
   createERPNextDeviceProfile,
   updateERPNextDeviceProfile,
   deleteERPNextDeviceProfile,
-} from "../../../../lib/api/api";
+} from "../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Plus, Edit, Trash2, Building2, Settings } from "lucide-react";
 
 // ERPNext Tenant type
@@ -552,40 +553,68 @@ export default function DeviceProfileAdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin mr-2" />
-                Loading device profiles...
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Profile Name</TableHead>
-                      <TableHead>ChirpStack ID</TableHead>
-                      <TableHead>Region(s)</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>MAC Version</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {profiles.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={8}
-                          className="text-center py-8 text-muted-foreground"
-                        >
-                          {selectedTenant
-                            ? "No device profiles found"
-                            : "Select a tenant to view device profiles"}
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Profile Name</TableHead>
+                    <TableHead>ChirpStack ID</TableHead>
+                    <TableHead>Region(s)</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>MAC Version</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Skeleton className="h-6 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-40" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-28" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-28" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Skeleton className="h-8 w-16" />
+                            <Skeleton className="h-8 w-16" />
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ) : (
-                      profiles.map((p) => {
+                    ))
+                  ) : (
+                    <>
+                      {profiles.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            {selectedTenant
+                              ? "No device profiles found"
+                              : "Select a tenant to view device profiles"}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        profiles.map((p) => {
                         const regions = parseRegions(p.region);
                         return (
                           <TableRow key={p.name}>
@@ -672,12 +701,13 @@ export default function DeviceProfileAdminPage() {
                             </TableCell>
                           </TableRow>
                         );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                        })
+                      )}
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
