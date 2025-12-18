@@ -8,7 +8,7 @@ import {
   createERPNextTenant,
   updateERPNextTenant,
   deleteERPNextTenant,
-} from "../../../../lib/api/api";
+} from "../../../lib/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Plus, Edit2, Trash2, Building2 } from "lucide-react";
 import {
   Dialog,
@@ -72,22 +73,30 @@ export default function OrganizationsAdminPage() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Create form state
   const [newTenantName, setNewTenantName] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newCanHaveGateways, setNewCanHaveGateways] = useState(false);
-  const [newMaxGatewayCount, setNewMaxGatewayCount] = useState<number | undefined>();
-  const [newMaxDeviceCount, setNewMaxDeviceCount] = useState<number | undefined>();
+  const [newMaxGatewayCount, setNewMaxGatewayCount] = useState<
+    number | undefined
+  >();
+  const [newMaxDeviceCount, setNewMaxDeviceCount] = useState<
+    number | undefined
+  >();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
+
   // Edit form state
   const [editingOrg, setEditingOrg] = useState<Tenant | null>(null);
   const [editTenantName, setEditTenantName] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editCanHaveGateways, setEditCanHaveGateways] = useState(false);
-  const [editMaxGatewayCount, setEditMaxGatewayCount] = useState<number | undefined>();
-  const [editMaxDeviceCount, setEditMaxDeviceCount] = useState<number | undefined>();
+  const [editMaxGatewayCount, setEditMaxGatewayCount] = useState<
+    number | undefined
+  >();
+  const [editMaxDeviceCount, setEditMaxDeviceCount] = useState<
+    number | undefined
+  >();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   async function reload() {
@@ -98,7 +107,7 @@ export default function OrganizationsAdminPage() {
       const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
       // API returns { data: [...], total: number } or { message: { data: [...], total: number } }
       let data: Tenant[] = [];
-      
+
       if (res) {
         // Handle direct response
         if (Array.isArray(res)) {
@@ -114,7 +123,7 @@ export default function OrganizationsAdminPage() {
           }
         }
       }
-      
+
       setItems(data);
     } catch (e: any) {
       console.error("Failed to load tenants:", e);
@@ -138,16 +147,16 @@ export default function OrganizationsAdminPage() {
         description: newDescription || undefined,
         can_have_gateways: newCanHaveGateways ? 1 : 0,
       };
-      
+
       if (newMaxGatewayCount !== undefined && newMaxGatewayCount !== null) {
         tenantData.max_gateway_count = newMaxGatewayCount;
       }
       if (newMaxDeviceCount !== undefined && newMaxDeviceCount !== null) {
         tenantData.max_device_count = newMaxDeviceCount;
       }
-      
+
       await createERPNextTenant(tenantData);
-      
+
       // Reset form
       setNewTenantName("");
       setNewDescription("");
@@ -156,7 +165,7 @@ export default function OrganizationsAdminPage() {
       setNewMaxDeviceCount(undefined);
       setIsCreateDialogOpen(false);
       setSuccess("Tenant created successfully!");
-      
+
       await reload();
     } catch (e: any) {
       setError(e?.message || "Failed to create tenant");
@@ -165,7 +174,7 @@ export default function OrganizationsAdminPage() {
 
   async function onUpdate() {
     if (!editingOrg) return;
-    
+
     setError(null);
     setSuccess(null);
     try {
@@ -174,20 +183,20 @@ export default function OrganizationsAdminPage() {
         description: editDescription || undefined,
         can_have_gateways: editCanHaveGateways ? 1 : 0,
       };
-      
+
       if (editMaxGatewayCount !== undefined && editMaxGatewayCount !== null) {
         updates.max_gateway_count = editMaxGatewayCount;
       }
       if (editMaxDeviceCount !== undefined && editMaxDeviceCount !== null) {
         updates.max_device_count = editMaxDeviceCount;
       }
-      
+
       await updateERPNextTenant(editingOrg.name, updates);
-      
+
       setIsEditDialogOpen(false);
       setEditingOrg(null);
       setSuccess("Tenant updated successfully!");
-      
+
       await reload();
     } catch (e: any) {
       setError(e?.message || "Failed to update tenant");
@@ -205,8 +214,13 @@ export default function OrganizationsAdminPage() {
   }
 
   async function onDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this tenant? This action cannot be undone.")) return;
-    
+    if (
+      !confirm(
+        "Are you sure you want to delete this tenant? This action cannot be undone."
+      )
+    )
+      return;
+
     setError(null);
     setSuccess(null);
     try {
@@ -261,30 +275,61 @@ export default function OrganizationsAdminPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <span className="ml-2">Loading organizations...</span>
-              </div>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Tenant Name</TableHead>
-                      <TableHead>ChirpStack ID</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Gateways</TableHead>
-                      <TableHead>Max Gateways</TableHead>
-                      <TableHead>Max Devices</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {items.map((tenant) => (
-                      <TableRow key={tenant.name}>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Tenant Name</TableHead>
+                    <TableHead>ChirpStack ID</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Gateways</TableHead>
+                    <TableHead>Max Gateways</TableHead>
+                    <TableHead>Max Devices</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Skeleton className="h-6 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-40" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-28" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-12" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-12" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <>
+                      {items.map((tenant) => (
+                        <TableRow key={tenant.name}>
                         <TableCell className="font-mono text-sm">
                           <Badge variant="outline">
                             {tenant.name?.substring(0, 8)}...
@@ -340,21 +385,22 @@ export default function OrganizationsAdminPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                    {items.length === 0 && !loading && (
-                      <TableRow>
-                        <TableCell
-                          colSpan={9}
-                          className="text-center py-8 text-muted-foreground"
-                        >
-                          No tenants found. Data is loaded from ERPNext.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+                      ))}
+                      {items.length === 0 && !loading && (
+                        <TableRow>
+                          <TableCell
+                            colSpan={9}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            No tenants found. Data is loaded from ERPNext.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
 
@@ -364,7 +410,8 @@ export default function OrganizationsAdminPage() {
             <DialogHeader>
               <DialogTitle>Create New Tenant</DialogTitle>
               <DialogDescription>
-                Create a new tenant in ERPNext. The tenant will be synced with ChirpStack.
+                Create a new tenant in ERPNext. The tenant will be synced with
+                ChirpStack.
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={onCreate} className="space-y-4">
@@ -395,7 +442,10 @@ export default function OrganizationsAdminPage() {
                   onChange={(e) => setNewCanHaveGateways(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300"
                 />
-                <Label htmlFor="new-can-have-gateways" className="cursor-pointer">
+                <Label
+                  htmlFor="new-can-have-gateways"
+                  className="cursor-pointer"
+                >
                   Can Have Gateways
                 </Label>
               </div>
@@ -405,7 +455,11 @@ export default function OrganizationsAdminPage() {
                   id="new-max-gateway-count"
                   type="number"
                   value={newMaxGatewayCount || ""}
-                  onChange={(e) => setNewMaxGatewayCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setNewMaxGatewayCount(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Enter max gateway count (optional)"
                   min="0"
                 />
@@ -416,7 +470,11 @@ export default function OrganizationsAdminPage() {
                   id="new-max-device-count"
                   type="number"
                   value={newMaxDeviceCount || ""}
-                  onChange={(e) => setNewMaxDeviceCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setNewMaxDeviceCount(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Enter max device count (optional)"
                   min="0"
                 />
@@ -429,9 +487,7 @@ export default function OrganizationsAdminPage() {
                 >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  Create Tenant
-                </Button>
+                <Button type="submit">Create Tenant</Button>
               </DialogFooter>
             </form>
           </DialogContent>
@@ -443,7 +499,8 @@ export default function OrganizationsAdminPage() {
             <DialogHeader>
               <DialogTitle>Edit Tenant</DialogTitle>
               <DialogDescription>
-                Update the tenant details below. Changes will be synced with ChirpStack.
+                Update the tenant details below. Changes will be synced with
+                ChirpStack.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -474,17 +531,26 @@ export default function OrganizationsAdminPage() {
                   onChange={(e) => setEditCanHaveGateways(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300"
                 />
-                <Label htmlFor="edit-can-have-gateways" className="cursor-pointer">
+                <Label
+                  htmlFor="edit-can-have-gateways"
+                  className="cursor-pointer"
+                >
                   Can Have Gateways
                 </Label>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-max-gateway-count">Max Gateway Count</Label>
+                <Label htmlFor="edit-max-gateway-count">
+                  Max Gateway Count
+                </Label>
                 <Input
                   id="edit-max-gateway-count"
                   type="number"
                   value={editMaxGatewayCount || ""}
-                  onChange={(e) => setEditMaxGatewayCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setEditMaxGatewayCount(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Enter max gateway count (optional)"
                   min="0"
                 />
@@ -495,7 +561,11 @@ export default function OrganizationsAdminPage() {
                   id="edit-max-device-count"
                   type="number"
                   value={editMaxDeviceCount || ""}
-                  onChange={(e) => setEditMaxDeviceCount(e.target.value ? parseInt(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setEditMaxDeviceCount(
+                      e.target.value ? parseInt(e.target.value) : undefined
+                    )
+                  }
                   placeholder="Enter max device count (optional)"
                   min="0"
                 />
@@ -508,9 +578,7 @@ export default function OrganizationsAdminPage() {
               >
                 Cancel
               </Button>
-              <Button onClick={onUpdate}>
-                Save Changes
-              </Button>
+              <Button onClick={onUpdate}>Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

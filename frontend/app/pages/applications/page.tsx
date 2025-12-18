@@ -1,160 +1,522 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchApplications } from "../../../lib/api/api";
+import type React from "react";
 
-interface Application {
-  application_id: string;
-  total_uplinks: number;
-  device_count: number;
-  last_seen: string;
-  first_seen: string;
+import { useEffect, useState } from "react";
+import {
+  fetchERPNextTenants,
+  fetchERPNextApplications,
+  createERPNextApplication,
+  updateERPNextApplication,
+  deleteERPNextApplication,
+} from "../../../lib/api/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2, Plus, Edit, Trash2, Building2, Zap } from "lucide-react";
+
+// ERPNext Tenant type
+type Tenant = {
+  name: string;
+  tenant_name: string;
+  chirpstack_id?: string;
+} & Record<string, any>;
+
+// ERPNext Application type
+type Application = {
+  name: string;
+  owner: string;
+  creation: string;
+  modified: string;
+  modified_by: string;
+  docstatus: number;
+  idx: number;
+  application_name: string;
+  tenant: string;
+  tenant_chirpstack_id?: string;
+  chirpstack_id?: string;
+  description?: string;
+  metadata?: any;
+  status?: string;
+} & Record<string, any>;
+
+// Helper function to format ERPNext date
+function formatERPNextDate(dateString?: string): string {
+  if (!dateString) return "—";
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
+  } catch {
+    return dateString;
+  }
 }
 
-export default function ApplicationsPage() {
-  const [applications, setApplications] = useState<Application[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ApplicationsAdminPage() {
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [apps, setApps] = useState<Application[]>([]);
+  const [selectedTenant, setSelectedTenant] = useState<string>("");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [editingApp, setEditingApp] = useState<Application | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const loadApplications = async () => {
+  async function loadTenants() {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = (await fetchApplications()) as {
-        success?: boolean;
-        applications?: Application[];
-      };
-
-      if (response.success && response.applications) {
-        setApplications(response.applications);
-      } else {
-        setError("Failed to load applications");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to load applications"
-      );
+      const res = await fetchERPNextTenants({ limit: 100, offset: 0 });
+      const data = (res as any).data || [];
+      setTenants(data as Tenant[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load tenants");
     } finally {
       setLoading(false);
     }
-  };
+  }
+
+  async function loadApps(tenantId?: string) {
+    if (!tenantId) {
+      setApps([]);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchERPNextApplications({
+        fields: ["*"],
+        tenant: tenantId,
+        limit: 100,
+        offset: 0,
+      });
+      const data = (res as any).data || [];
+      // Filter applications by tenant on client side as well to ensure correctness
+      // This is a safety measure in case backend filter doesn't work
+      const filteredData = data.filter(
+        (app: Application) => app.tenant === tenantId
+      );
+      setApps(filteredData as Application[]);
+    } catch (e: any) {
+      setError(e?.message || "Failed to load applications");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    loadApplications();
+    loadTenants();
   }, []);
 
-  const getActivityLevel = (totalUplinks: number) => {
-    if (totalUplinks > 100)
-      return { color: "bg-green-100 text-green-800", text: "High" };
-    if (totalUplinks > 10)
-      return { color: "bg-yellow-100 text-yellow-800", text: "Medium" };
-    return { color: "bg-gray-100 text-gray-800", text: "Low" };
-  };
+  useEffect(() => {
+    if (selectedTenant) {
+      loadApps(selectedTenant);
+    } else {
+      setApps([]);
+    }
+  }, [selectedTenant]);
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
-        </div>
-      </div>
-    );
+  async function onCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedTenant || !newName.trim()) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await createERPNextApplication({
+        application_name: newName.trim(),
+        tenant: selectedTenant,
+        description: newDescription.trim() || undefined,
+      });
+      setNewName("");
+      setNewDescription("");
+      setSuccess("Application created successfully!");
+      await loadApps(selectedTenant);
+    } catch (e: any) {
+      setError(e?.message || "Failed to create application");
+    }
+  }
+
+  function handleEdit(app: Application) {
+    setEditingApp(app);
+    setEditName(app.application_name || "");
+    setEditDescription(app.description || "");
+    setIsEditDialogOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingApp || !editName.trim()) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await updateERPNextApplication(editingApp.name, {
+        application_name: editName.trim(),
+        description: editDescription.trim() || undefined,
+      });
+      setSuccess("Application updated successfully!");
+      await loadApps(selectedTenant);
+      setIsEditDialogOpen(false);
+      setEditingApp(null);
+    } catch (e: any) {
+      setError(e?.message || "Failed to update application");
+    }
+  }
+
+  async function handleDelete(app: Application) {
+    setError(null);
+    setSuccess(null);
+    try {
+      await deleteERPNextApplication(app.name);
+      setSuccess("Application deleted successfully!");
+      await loadApps(selectedTenant);
+    } catch (e: any) {
+      setError(e?.message || "Failed to delete application");
+    }
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">📋 Applications</h1>
-          <button
-            onClick={loadApplications}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200"
-          >
-            Refresh
-          </button>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="mx-auto max-w-6xl space-y-8">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900">
+            <Zap className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
+            <p className="text-muted-foreground">
+              Manage applications from ERPNext
+            </p>
+          </div>
         </div>
 
-        {/* Error Message */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Create New Application
+            </CardTitle>
+            <CardDescription>
+              Create a new application in ERPNext. The application will be
+              synced with ChirpStack.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1">
+                <Label htmlFor="tenant-select" className="mb-2 ">
+                  Tenant
+                </Label>
+                <Select
+                  value={selectedTenant}
+                  onValueChange={setSelectedTenant}
+                >
+                  <SelectTrigger id="tenant-select" className="min-w-[260px]">
+                    <SelectValue placeholder="Select tenant..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {tenants.map((t) => (
+                      <SelectItem key={t.name} value={t.name}>
+                        <div className="flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          {t.tenant_name || t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <form onSubmit={onCreate} className="flex flex-col gap-4 flex-1">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <Label htmlFor="app-name" className="mb-2">
+                      Application Name *
+                    </Label>
+                    <Input
+                      id="app-name"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Enter application name"
+                      required
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <Label htmlFor="app-description" className="mb-2">
+                      Description
+                    </Label>
+                    <Input
+                      id="app-description"
+                      value={newDescription}
+                      onChange={(e) => setNewDescription(e.target.value)}
+                      placeholder="Enter description (optional)"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    type="submit"
+                    disabled={!selectedTenant || !newName.trim()}
+                    className="w-full sm:w-auto"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Application
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </CardContent>
+        </Card>
+
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
-        {/* Applications Table */}
-        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Application ID
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Activity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Uplinks
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Devices
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Activity
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    First Activity
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {applications.map((app) => {
-                  const activity = getActivityLevel(app.total_uplinks);
-                  return (
-                    <tr key={app.application_id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="text-sm font-medium text-gray-900">
-                            {app.application_id}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${activity.color}`}
-                        >
-                          {activity.text}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {app.total_uplinks}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {app.device_count}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(app.last_seen).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(app.first_seen).toLocaleString()}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+        {success && (
+          <Alert>
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
+        )}
 
-          {applications.length === 0 && !loading && (
-            <div className="text-center py-8 text-gray-500">
-              No applications found. Create some test devices to get started!
+        <Card>
+          <CardHeader>
+            <CardTitle>Applications</CardTitle>
+            <CardDescription>
+              {selectedTenant
+                ? `${apps.length} application${
+                    apps.length !== 1 ? "s" : ""
+                  } from ERPNext`
+                : "Select a tenant to view applications"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Application Name</TableHead>
+                    <TableHead>ChirpStack ID</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }).map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell>
+                          <Skeleton className="h-6 w-20" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-32" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-24" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-40" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-6 w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <Skeleton className="h-5 w-28" />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Skeleton className="h-8 w-16" />
+                            <Skeleton className="h-8 w-16" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <>
+                      {apps.length === 0 ? (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-8 text-muted-foreground"
+                          >
+                            {selectedTenant
+                              ? "No applications found"
+                              : "Select a tenant to view applications"}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        apps.map((app) => (
+                        <TableRow key={app.name}>
+                          <TableCell className="font-mono text-sm">
+                            <Badge variant="outline">
+                              {app.name?.substring(0, 8)}...
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {app.application_name || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {app.chirpstack_id || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {app.description || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                app.status === "Active"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {app.status || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatERPNextDate(app.creation)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(app)}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="destructive" size="sm">
+                                    <Trash2 className="w-4 h-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete Application
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "
+                                      {app.application_name || app.name}"? This
+                                      action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handleDelete(app)}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                        ))
+                      )}
+                    </>
+                  )}
+                </TableBody>
+              </Table>
             </div>
-          )}
-        </div>
+          </CardContent>
+        </Card>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Application</DialogTitle>
+              <DialogDescription>
+                Update the application details. Changes will be synced with
+                ChirpStack.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Application Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Enter application name"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Enter description (optional)"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleSaveEdit}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
