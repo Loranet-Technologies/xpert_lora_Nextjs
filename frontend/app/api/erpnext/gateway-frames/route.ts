@@ -90,20 +90,40 @@ export async function GET(request: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
 
         try {
           while (true) {
             const { done, value } = await reader.read();
             if (done) {
-              controller.close();
+              try {
+                controller.close();
+              } catch {
+                // Controller might already be closed, ignore
+              }
               break;
             }
-            controller.enqueue(value);
+            try {
+              controller.enqueue(value);
+            } catch {
+              // Controller might be closed by client, stop reading
+              reader.cancel().catch(() => {});
+              break;
+            }
           }
         } catch (error) {
           console.error("Error streaming gateway frames:", error);
-          controller.error(error);
+          try {
+            controller.error(error);
+          } catch {
+            // Controller might already be closed, ignore
+          }
+        } finally {
+          // Ensure reader is released
+          try {
+            reader.releaseLock();
+          } catch {
+            // Reader might already be released, ignore
+          }
         }
       },
     });

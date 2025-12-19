@@ -35,7 +35,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Edit2, Trash2, Radio } from "lucide-react";
+import { Plus, Edit2, Trash2, Radio } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -144,6 +144,7 @@ export default function GatewayAdminPage() {
 
   useEffect(() => {
     reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTenant]);
 
   async function onCreate(e: React.FormEvent) {
@@ -160,7 +161,8 @@ export default function GatewayAdminPage() {
     }
   }
 
-  async function onUpdate(id: string, updates: { name?: string }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function onUpdate(_id: string, _updates: { name?: string }) {
     try {
       // Note: Updating gateways in ERPNext would require a different API endpoint
       // For now, we'll show an error or you can implement the update endpoint
@@ -180,7 +182,8 @@ export default function GatewayAdminPage() {
     setIsEditDialogOpen(true);
   }
 
-  async function onDelete(id: string) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async function onDelete(_id: string) {
     if (!confirm("Delete gateway?")) return;
     try {
       // Note: Deleting gateways in ERPNext would require a different API endpoint
@@ -338,62 +341,62 @@ export default function GatewayAdminPage() {
                     <>
                       {items.map((gateway) => (
                         <TableRow key={gateway.name}>
-                        <TableCell className="font-mono text-sm">
-                          <Badge variant="outline">
-                            {gateway.name?.substring(0, 8)}...
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {gateway.gateway_name || "—"}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {gateway.gateway_id_mac || "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {gateway.chirpstack_id || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              gateway.status === "Active"
-                                ? "default"
-                                : "secondary"
-                            }
-                          >
-                            {gateway.status || "—"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {gateway.location || "—"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm font-mono">
-                          {formatCoordinates(
-                            gateway.latitude,
-                            gateway.longitude
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatERPNextDate(gateway.creation)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEditDialog(gateway)}
+                          <TableCell className="font-mono text-sm">
+                            <Badge variant="outline">
+                              {gateway.name?.substring(0, 8)}...
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {gateway.gateway_name || "—"}
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {gateway.gateway_id_mac || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {gateway.chirpstack_id || "—"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                gateway.status === "Active"
+                                  ? "default"
+                                  : "secondary"
+                              }
                             >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => onDelete(gateway.name)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                              {gateway.status || "—"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {gateway.location || "—"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm font-mono">
+                            {formatCoordinates(
+                              gateway.latitude,
+                              gateway.longitude
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatERPNextDate(gateway.creation)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openEditDialog(gateway)}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => onDelete(gateway.name)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
                       ))}
                       {items.length === 0 && !loading && (
                         <TableRow>

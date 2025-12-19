@@ -20,7 +20,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, account, profile }) {
+    async jwt({ token, account }) {
       // Initial sign in - store account info in token
       if (account) {
         token.accessToken = account.access_token;
