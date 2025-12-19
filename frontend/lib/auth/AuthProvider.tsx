@@ -62,9 +62,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
-// ERPNext configuration
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();

@@ -57,7 +57,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Edit, Trash2, Building2, Settings } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Settings } from "lucide-react";
 
 // ERPNext Tenant type
 type Tenant = {
@@ -109,6 +109,7 @@ const REGION_ENUM_TO_NAME: { [key: number]: string } = {
 };
 
 // Helper function to convert region enum to readable name
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getRegionName(regionEnum: number | string | undefined): string {
   if (typeof regionEnum === "string") {
     return regionEnum;
@@ -615,92 +616,92 @@ export default function DeviceProfileAdminPage() {
                         </TableRow>
                       ) : (
                         profiles.map((p) => {
-                        const regions = parseRegions(p.region);
-                        return (
-                          <TableRow key={p.name}>
-                            <TableCell className="font-mono text-sm">
-                              <Badge variant="outline">
-                                {p.name?.substring(0, 8)}...
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {p.profile_name || "—"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {p.chirpstack_id || "—"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {regions.length > 0 ? (
-                                  regions.map((region, idx) => (
-                                    <Badge
-                                      key={idx}
-                                      variant="outline"
-                                      className="text-xs"
-                                    >
-                                      {region}
-                                    </Badge>
-                                  ))
-                                ) : (
-                                  <span className="text-muted-foreground text-sm">
-                                    —
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {p.small_text || "—"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {p.mac_version || "—"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {formatERPNextDate(p.creation)}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit(p)}
-                                >
-                                  <Edit className="w-4 h-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="sm">
-                                      <Trash2 className="w-4 h-4 mr-1" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Delete Device Profile
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete "
-                                        {p.profile_name || p.name}"? This action
-                                        cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>
-                                        Cancel
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => handleDelete(p)}
+                          const regions = parseRegions(p.region);
+                          return (
+                            <TableRow key={p.name}>
+                              <TableCell className="font-mono text-sm">
+                                <Badge variant="outline">
+                                  {p.name?.substring(0, 8)}...
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {p.profile_name || "—"}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {p.chirpstack_id || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-1">
+                                  {regions.length > 0 ? (
+                                    regions.map((region, idx) => (
+                                      <Badge
+                                        key={idx}
+                                        variant="outline"
+                                        className="text-xs"
                                       >
+                                        {region}
+                                      </Badge>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">
+                                      —
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {p.small_text || "—"}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {p.mac_version || "—"}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {formatERPNextDate(p.creation)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleEdit(p)}
+                                  >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    Edit
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="destructive" size="sm">
+                                        <Trash2 className="w-4 h-4 mr-1" />
                                         Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        );
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>
+                                          Delete Device Profile
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete &quot;
+                                          {p.profile_name || p.name}&quot;? This
+                                          action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>
+                                          Cancel
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDelete(p)}
+                                        >
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          );
                         })
                       )}
                     </>

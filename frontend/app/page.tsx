@@ -19,7 +19,7 @@ import GatewayAdminPage from "./pages/gateway/page";
 import GatewayListPage from "./pages/gateway-list/page";
 
 export default function Home() {
-  const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState("organizations");
 
   // Show loading spinner while checking authentication

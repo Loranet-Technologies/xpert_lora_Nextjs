@@ -57,7 +57,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Edit, Trash2, Building2, Zap } from "lucide-react";
+import { Plus, Edit, Trash2, Building2, Zap } from "lucide-react";
 
 // ERPNext Tenant type
 type Tenant = {
@@ -394,78 +394,78 @@ export default function ApplicationsAdminPage() {
                         </TableRow>
                       ) : (
                         apps.map((app) => (
-                        <TableRow key={app.name}>
-                          <TableCell className="font-mono text-sm">
-                            <Badge variant="outline">
-                              {app.name?.substring(0, 8)}...
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {app.application_name || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {app.chirpstack_id || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {app.description || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                app.status === "Active"
-                                  ? "default"
-                                  : "secondary"
-                              }
-                            >
-                              {app.status || "—"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {formatERPNextDate(app.creation)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(app)}
+                          <TableRow key={app.name}>
+                            <TableCell className="font-mono text-sm">
+                              <Badge variant="outline">
+                                {app.name?.substring(0, 8)}...
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {app.application_name || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {app.chirpstack_id || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {app.description || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  app.status === "Active"
+                                    ? "default"
+                                    : "secondary"
+                                }
                               >
-                                <Edit className="w-4 h-4 mr-1" />
-                                Edit
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="sm">
-                                    <Trash2 className="w-4 h-4 mr-1" />
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Delete Application
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "
-                                      {app.application_name || app.name}"? This
-                                      action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handleDelete(app)}
-                                    >
+                                {app.status || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {formatERPNextDate(app.creation)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(app)}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                      <Trash2 className="w-4 h-4 mr-1" />
                                       Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Application
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete &quot;
+                                        {app.application_name || app.name}
+                                        &quot;? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleDelete(app)}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         ))
                       )}
                     </>

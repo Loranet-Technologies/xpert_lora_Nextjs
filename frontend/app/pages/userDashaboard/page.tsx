@@ -17,7 +17,7 @@ import {
 
 export default function UserDashboard() {
   const { stats, isLoading, error } = useDashboardData();
-  const { totalDevices, activeDevices, totalUplinks } = useDeviceStats();
+  const { totalDevices, activeDevices } = useDeviceStats();
   const { recentUplinks } = useRecentActivity();
 
   if (isLoading) {

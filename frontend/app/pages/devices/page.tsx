@@ -59,7 +59,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Edit, Trash2, Smartphone } from "lucide-react";
+import { Plus, Edit, Trash2, Smartphone } from "lucide-react";
 
 // ERPNext Tenant type
 type Tenant = {
@@ -609,95 +609,97 @@ export default function DevicesAdminPage() {
                         </TableRow>
                       ) : (
                         devices.map((d) => (
-                        <TableRow key={d.name}>
-                          <TableCell className="font-mono text-sm">
-                            <Badge variant="outline">
-                              {d.name?.substring(0, 8)}...
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {d.device_name || "—"}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">
-                            {d.dev_eui || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {d.chirpstack_id || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                d.status === "Active" ? "default" : "secondary"
-                              }
-                            >
-                              {d.status || "—"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {d.description || "—"}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {formatERPNextDate(d.creation)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditDialog({
-                                    open: true,
-                                    device: d,
-                                    name: d.device_name || "",
-                                    description: d.description || "",
-                                    status: d.status || "Active",
-                                    deviceProfile: d.device_profile || "",
-                                  });
-                                }}
+                          <TableRow key={d.name}>
+                            <TableCell className="font-mono text-sm">
+                              <Badge variant="outline">
+                                {d.name?.substring(0, 8)}...
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {d.device_name || "—"}
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {d.dev_eui || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {d.chirpstack_id || "—"}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  d.status === "Active"
+                                    ? "default"
+                                    : "secondary"
+                                }
                               >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Edit
-                              </Button>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="destructive" size="sm">
-                                    <Trash2 className="h-4 w-4 mr-1" />
-                                    Delete
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>
-                                      Delete Device
-                                    </AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete "
-                                      {d.device_name || d.name}" (DevEUI:{" "}
-                                      {d.dev_eui || d.name})? This action cannot
-                                      be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>
-                                      Cancel
-                                    </AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => {
-                                        setDeleteDialog({
-                                          open: true,
-                                          device: d,
-                                        });
-                                        setTimeout(() => handleDelete(), 0);
-                                      }}
-                                    >
+                                {d.status || "—"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {d.description || "—"}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {formatERPNextDate(d.creation)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditDialog({
+                                      open: true,
+                                      device: d,
+                                      name: d.device_name || "",
+                                      description: d.description || "",
+                                      status: d.status || "Active",
+                                      deviceProfile: d.device_profile || "",
+                                    });
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="destructive" size="sm">
+                                      <Trash2 className="h-4 w-4 mr-1" />
                                       Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Device
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete &quot;
+                                        {d.device_name || d.name}&quot; (DevEUI:{" "}
+                                        {d.dev_eui || d.name})? This action
+                                        cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>
+                                        Cancel
+                                      </AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => {
+                                          setDeleteDialog({
+                                            open: true,
+                                            device: d,
+                                          });
+                                          setTimeout(() => handleDelete(), 0);
+                                        }}
+                                      >
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         ))
                       )}
                     </>

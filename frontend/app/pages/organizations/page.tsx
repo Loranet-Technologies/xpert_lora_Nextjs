@@ -30,7 +30,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Plus, Edit2, Trash2, Building2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Building2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,

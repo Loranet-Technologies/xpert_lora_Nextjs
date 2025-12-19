@@ -10,7 +10,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   Shield,
-  Users,
   Settings,
   Database,
   Loader2,
@@ -28,7 +27,6 @@ export default function AdminDashboard() {
   const {
     totalDevices,
     totalApplications,
-    totalUsers,
     totalGateways,
     systemStatus,
     isLoading: dashboardLoading,

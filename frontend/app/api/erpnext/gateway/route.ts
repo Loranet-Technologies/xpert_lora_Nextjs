@@ -18,13 +18,18 @@ export async function GET(request: NextRequest) {
 
     // Get query parameters from the request
     const { searchParams } = new URL(request.url);
-    const fields = searchParams.get("fields") || '["*"]';
-    const filters = searchParams.get("filters");
+    const filtersParam = searchParams.get("filters");
+    const limit = parseInt(searchParams.get("limit") || "20");
+    const offset = parseInt(searchParams.get("offset") || "0");
 
-    // Build the URL with query parameters
-    let url = `${ERPNext_BASE_URL}/api/resource/Gateway?fields=${encodeURIComponent(fields)}`;
-    if (filters) {
-      url += `&filters=${encodeURIComponent(filters)}`;
+    // Parse filters if provided
+    let filters = null;
+    if (filtersParam) {
+      try {
+        filters = JSON.parse(filtersParam);
+      } catch {
+        filters = filtersParam;
+      }
     }
 
     // Determine token type and format headers accordingly
@@ -50,34 +55,89 @@ export async function GET(request: NextRequest) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Forward the request to ERPNext
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      let errorData: any = { message: "Failed to fetch gateways" };
-      
-      try {
-        errorData = JSON.parse(errorText);
-      } catch {
-        errorData = { message: errorText || "Failed to fetch gateways" };
+    // Use list_gateways API method if filters, limit, or offset are provided
+    // Otherwise, fall back to resource API
+    if (filters !== null || limit !== 20 || offset !== 0) {
+      // Use list_gateways API method
+      const body: any = {
+        limit,
+        offset,
+      };
+      if (filters !== null) {
+        body.filters = JSON.stringify(filters);
       }
 
-      console.error(
-        `Failed to fetch gateways: ${response.status} - ${errorData.message}`
+      const response = await fetch(
+        `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_gateways`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+        }
       );
-      
-      return NextResponse.json(
-        { message: errorData.message || "Failed to fetch gateways" },
-        { status: response.status }
-      );
-    }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        let errorData: any = { message: "Failed to fetch gateways" };
+
+        try {
+          errorData = JSON.parse(errorText);
+          if (errorData.message && typeof errorData.message === "object") {
+            errorData.message =
+              errorData.message.exc_message ||
+              errorData.message.message ||
+              JSON.stringify(errorData.message);
+          }
+        } catch {
+          errorData = { message: errorText || "Failed to fetch gateways" };
+        }
+
+        return NextResponse.json(
+          { message: errorData.message || "Failed to fetch gateways" },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      // ERPNext API methods return { message: {...} }, unwrap it
+      return NextResponse.json(data.message || data);
+    } else {
+      // Fall back to resource API for simple queries
+      const fields = searchParams.get("fields") || '["*"]';
+      let url = `${ERPNext_BASE_URL}/api/resource/Gateway?fields=${encodeURIComponent(fields)}`;
+      if (filtersParam) {
+        url += `&filters=${encodeURIComponent(filtersParam)}`;
+      }
+
+      // Forward the request to ERPNext
+      const response = await fetch(url, {
+        method: "GET",
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => "");
+        let errorData: any = { message: "Failed to fetch gateways" };
+
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { message: errorText || "Failed to fetch gateways" };
+        }
+
+        console.error(
+          `Failed to fetch gateways: ${response.status} - ${errorData.message}`
+        );
+
+        return NextResponse.json(
+          { message: errorData.message || "Failed to fetch gateways" },
+          { status: response.status }
+        );
+      }
+
+      const data = await response.json();
+      return NextResponse.json(data);
+    }
   } catch (error) {
     console.error("ERPNext gateway proxy error:", error);
     return NextResponse.json(
