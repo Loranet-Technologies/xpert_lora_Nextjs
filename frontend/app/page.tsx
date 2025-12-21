@@ -3,26 +3,10 @@
 import { useState } from "react";
 import { useAuth } from "../lib/auth/AuthProvider";
 import LoginPage from "../components/LoginPage";
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "../components/ui/sidebar";
-import { AppSidebar } from "../components/app-sidebar";
 import DashboardPage from "./pages/dashboard/page";
-import UserDashboard from "./pages/userDashaboard/page";
-import OrganizationsAdminPage from "./pages/organizations/page";
-import AdminDashboardPage from "./pages/Admin-Dashbaord/page";
-import ApplicationsAdminPage from "./pages/applications/page";
-import DevicesAdminPage from "./pages/devices/page";
-import DeviceProfileAdminPage from "./pages/deviceProfile/page";
-import GatewayAdminPage from "./pages/gateway/page";
-import GatewayListPage from "./pages/gateway-list/page";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState("dashboard");
-
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
