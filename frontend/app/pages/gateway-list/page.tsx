@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   listERPNextGateways,
   syncERPNextGateways,
@@ -76,36 +76,6 @@ type Tenant = {
 
 export default function GatewayListPage() {
   const router = useRouter();
-  const pathname = usePathname();
-
-  // Map navigation IDs to routes
-  const routeMap: Record<string, string> = {
-    organizations: "/",
-    applications: "/",
-    deviceProfile: "/",
-    devices: "/",
-    gateway: "/",
-    gatewayList: "/pages/gateway-list",
-    "Admin-Dashboard": "/",
-    Userdashboard: "/",
-  };
-
-  // Determine active tab from pathname
-  const getActiveTab = (): string => {
-    if (pathname?.includes("/gateway-list")) return "gatewayList";
-    return "gatewayList"; // Default to gatewayList for this page
-  };
-
-  const [activeTab, setActiveTab] = useState<string>(() => getActiveTab());
-
-  // Handle navigation when sidebar item is clicked
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    const route = routeMap[tab];
-    if (route) {
-      router.push(route);
-    }
-  };
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -194,12 +164,6 @@ export default function GatewayListPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTenant, offset]);
 
-  // Update active tab when pathname changes
-  useEffect(() => {
-    setActiveTab(getActiveTab());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
   function formatCoordinates(lat?: number, lon?: number): string {
     if (lat === undefined || lon === undefined || lat === 0 || lon === 0) {
       return "—";
@@ -209,7 +173,7 @@ export default function GatewayListPage() {
 
   return (
     <SidebarProvider>
-      <AppSidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

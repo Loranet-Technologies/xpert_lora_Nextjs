@@ -9,6 +9,7 @@ import {
   SidebarTrigger,
 } from "../components/ui/sidebar";
 import { AppSidebar } from "../components/app-sidebar";
+import DashboardPage from "./pages/dashboard/page";
 import UserDashboard from "./pages/userDashaboard/page";
 import OrganizationsAdminPage from "./pages/organizations/page";
 import AdminDashboardPage from "./pages/Admin-Dashbaord/page";
@@ -20,7 +21,7 @@ import GatewayListPage from "./pages/gateway-list/page";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState("organizations");
+  const [activeTab, setActiveTab] = useState("dashboard");
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -39,25 +40,6 @@ export default function Home() {
     return <LoginPage />;
   }
 
-  return (
-    <SidebarProvider>
-      <AppSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          {/* Content - Show actual page components */}
-          {activeTab === "organizations" && <OrganizationsAdminPage />}
-          {activeTab === "applications" && <ApplicationsAdminPage />}
-          {activeTab === "deviceProfile" && <DeviceProfileAdminPage />}
-          {activeTab === "devices" && <DevicesAdminPage />}
-          {activeTab === "gateway" && <GatewayAdminPage />}
-          {activeTab === "gatewayList" && <GatewayListPage />}
-          {activeTab === "Admin-Dashboard" && <AdminDashboardPage />}
-          {activeTab === "Userdashboard" && <UserDashboard />}
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
-  );
+  // Redirect to dashboard by default
+  return <DashboardPage />;
 }

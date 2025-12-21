@@ -10,6 +10,12 @@ import {
   updateERPNextDeviceProfile,
   deleteERPNextDeviceProfile,
 } from "../../../lib/api/api";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -337,521 +343,547 @@ export default function DeviceProfileAdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900">
-            <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Device Profiles
-            </h1>
-            <p className="text-muted-foreground">
-              Manage device profiles from ERPNext
-            </p>
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Create New Device Profile
-            </CardTitle>
-            <CardDescription>
-              Create a new device profile in ERPNext. The device profile will be
-              synced with ChirpStack.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="tenant-select" className="mb-2">
-                    Tenant
-                  </Label>
-                  <Select
-                    value={selectedTenant}
-                    onValueChange={setSelectedTenant}
-                  >
-                    <SelectTrigger id="tenant-select" className="min-w-[260px]">
-                      <SelectValue placeholder="Select tenant..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tenants.map((t) => (
-                        <SelectItem key={t.name} value={t.name}>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="w-4 h-4" />
-                            {t.tenant_name || t.name}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-6">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900">
+                <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Device Profiles
+                </h1>
+                <p className="text-muted-foreground">
+                  Manage device profiles from ERPNext
+                </p>
+              </div>
+            </div>
 
-              <form onSubmit={onCreate} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create New Device Profile
+                </CardTitle>
+                <CardDescription>
+                  Create a new device profile in ERPNext. The device profile
+                  will be synced with ChirpStack.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="flex-1">
+                      <Label htmlFor="tenant-select" className="mb-2">
+                        Tenant
+                      </Label>
+                      <Select
+                        value={selectedTenant}
+                        onValueChange={setSelectedTenant}
+                      >
+                        <SelectTrigger
+                          id="tenant-select"
+                          className="min-w-[260px]"
+                        >
+                          <SelectValue placeholder="Select tenant..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tenants.map((t) => (
+                            <SelectItem key={t.name} value={t.name}>
+                              <div className="flex items-center gap-2">
+                                <Building2 className="w-4 h-4" />
+                                {t.tenant_name || t.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <form onSubmit={onCreate} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="profile-name" className="mb-2">
+                          Profile Name *
+                        </Label>
+                        <Input
+                          id="profile-name"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          placeholder="Enter profile name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="profile-region" className="mb-2">
+                          Region
+                        </Label>
+                        <Select value={newRegion} onValueChange={setNewRegion}>
+                          <SelectTrigger id="profile-region">
+                            <SelectValue placeholder="Select region..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {REGIONS.map((region) => (
+                              <SelectItem key={region} value={region}>
+                                {region}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="profile-mac-version" className="mb-2">
+                          MAC Version
+                        </Label>
+                        <Select
+                          value={newMacVersion}
+                          onValueChange={setNewMacVersion}
+                        >
+                          <SelectTrigger id="profile-mac-version">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="LORAWAN_1_0_0">
+                              LoRaWAN 1.0.0
+                            </SelectItem>
+                            <SelectItem value="LORAWAN_1_0_1">
+                              LoRaWAN 1.0.1
+                            </SelectItem>
+                            <SelectItem value="LORAWAN_1_0_2">
+                              LoRaWAN 1.0.2
+                            </SelectItem>
+                            <SelectItem value="LORAWAN_1_0_3">
+                              LoRaWAN 1.0.3
+                            </SelectItem>
+                            <SelectItem value="LORAWAN_1_0_4">
+                              LoRaWAN 1.0.4
+                            </SelectItem>
+                            <SelectItem value="LORAWAN_1_1_0">
+                              LoRaWAN 1.1.0
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label
+                          htmlFor="profile-regional-params"
+                          className="mb-2"
+                        >
+                          Regional Parameters Revision
+                        </Label>
+                        <Select
+                          value={newRegionalParams}
+                          onValueChange={setNewRegionalParams}
+                        >
+                          <SelectTrigger id="profile-regional-params">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A">A</SelectItem>
+                            <SelectItem value="B">B</SelectItem>
+                            <SelectItem value="C">C</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="supports-otaa"
+                          checked={newSupportsOtaa}
+                          onChange={(e) => setNewSupportsOtaa(e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label
+                          htmlFor="supports-otaa"
+                          className="cursor-pointer"
+                        >
+                          Supports OTAA (Join)
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="supports-32bit"
+                          checked={newSupports32Bit}
+                          onChange={(e) =>
+                            setNewSupports32Bit(e.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <Label
+                          htmlFor="supports-32bit"
+                          className="cursor-pointer"
+                        >
+                          Supports 32-bit Frame Counter
+                        </Label>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="profile-description" className="mb-2">
+                        Description
+                      </Label>
+                      <Input
+                        id="profile-description"
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        placeholder="Enter profile description (optional)"
+                      />
+                    </div>
+
+                    <div className="flex items-end">
+                      <Button
+                        type="submit"
+                        disabled={!selectedTenant || !newName.trim()}
+                        className="w-full sm:w-auto"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Create Profile
+                      </Button>
+                    </div>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Device Profiles</CardTitle>
+                <CardDescription>
+                  {selectedTenant
+                    ? `${profiles.length} profile${
+                        profiles.length !== 1 ? "s" : ""
+                      } from ERPNext`
+                    : "Select a tenant to view device profiles"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Profile Name</TableHead>
+                        <TableHead>ChirpStack ID</TableHead>
+                        <TableHead>Region(s)</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>MAC Version</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <Skeleton className="h-6 w-20" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-32" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-24" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-16" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-40" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-28" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-28" />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Skeleton className="h-8 w-16" />
+                                <Skeleton className="h-8 w-16" />
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <>
+                          {profiles.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                {selectedTenant
+                                  ? "No device profiles found"
+                                  : "Select a tenant to view device profiles"}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            profiles.map((p) => {
+                              const regions = parseRegions(p.region);
+                              return (
+                                <TableRow key={p.name}>
+                                  <TableCell className="font-mono text-sm">
+                                    <Badge variant="outline">
+                                      {p.name?.substring(0, 8)}...
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {p.profile_name || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {p.chirpstack_id || "—"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                      {regions.length > 0 ? (
+                                        regions.map((region, idx) => (
+                                          <Badge
+                                            key={idx}
+                                            variant="outline"
+                                            className="text-xs"
+                                          >
+                                            {region}
+                                          </Badge>
+                                        ))
+                                      ) : (
+                                        <span className="text-muted-foreground text-sm">
+                                          —
+                                        </span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {p.small_text || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {p.mac_version || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {formatERPNextDate(p.creation)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEdit(p)}
+                                      >
+                                        <Edit className="w-4 h-4 mr-1" />
+                                        Edit
+                                      </Button>
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-1" />
+                                            Delete
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>
+                                              Delete Device Profile
+                                            </AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete
+                                              &quot;
+                                              {p.profile_name || p.name}&quot;?
+                                              This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>
+                                              Cancel
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => handleDelete(p)}
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
+                          )}
+                        </>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Device Profile</DialogTitle>
+                  <DialogDescription>
+                    Update the device profile details. Changes will be synced
+                    with ChirpStack.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
                   <div>
-                    <Label htmlFor="profile-name" className="mb-2">
-                      Profile Name *
-                    </Label>
+                    <Label htmlFor="edit-name">Profile Name *</Label>
                     <Input
-                      id="profile-name"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
+                      id="edit-name"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
                       placeholder="Enter profile name"
                       required
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="profile-region" className="mb-2">
-                      Region
-                    </Label>
-                    <Select value={newRegion} onValueChange={setNewRegion}>
-                      <SelectTrigger id="profile-region">
-                        <SelectValue placeholder="Select region..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {REGIONS.map((region) => (
-                          <SelectItem key={region} value={region}>
-                            {region}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="edit-region">Region</Label>
+                      <Select value={editRegion} onValueChange={setEditRegion}>
+                        <SelectTrigger id="edit-region">
+                          <SelectValue placeholder="Select region..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {REGIONS.map((region) => (
+                            <SelectItem key={region} value={region}>
+                              {region}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-mac-version">MAC Version</Label>
+                      <Select
+                        value={editMacVersion}
+                        onValueChange={setEditMacVersion}
+                      >
+                        <SelectTrigger id="edit-mac-version">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="LORAWAN_1_0_0">
+                            LoRaWAN 1.0.0
                           </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                          <SelectItem value="LORAWAN_1_0_1">
+                            LoRaWAN 1.0.1
+                          </SelectItem>
+                          <SelectItem value="LORAWAN_1_0_2">
+                            LoRaWAN 1.0.2
+                          </SelectItem>
+                          <SelectItem value="LORAWAN_1_0_3">
+                            LoRaWAN 1.0.3
+                          </SelectItem>
+                          <SelectItem value="LORAWAN_1_0_4">
+                            LoRaWAN 1.0.4
+                          </SelectItem>
+                          <SelectItem value="LORAWAN_1_1_0">
+                            LoRaWAN 1.1.0
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-regional-params">
+                        Regional Parameters Revision
+                      </Label>
+                      <Select
+                        value={editRegionalParams}
+                        onValueChange={setEditRegionalParams}
+                      >
+                        <SelectTrigger id="edit-regional-params">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="A">A</SelectItem>
+                          <SelectItem value="B">B</SelectItem>
+                          <SelectItem value="C">C</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="edit-supports-otaa"
+                        checked={editSupportsOtaa}
+                        onChange={(e) => setEditSupportsOtaa(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label
+                        htmlFor="edit-supports-otaa"
+                        className="cursor-pointer"
+                      >
+                        Supports OTAA (Join)
+                      </Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="edit-supports-32bit"
+                        checked={editSupports32Bit}
+                        onChange={(e) => setEditSupports32Bit(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      <Label
+                        htmlFor="edit-supports-32bit"
+                        className="cursor-pointer"
+                      >
+                        Supports 32-bit Frame Counter
+                      </Label>
+                    </div>
                   </div>
                   <div>
-                    <Label htmlFor="profile-mac-version" className="mb-2">
-                      MAC Version
-                    </Label>
-                    <Select
-                      value={newMacVersion}
-                      onValueChange={setNewMacVersion}
-                    >
-                      <SelectTrigger id="profile-mac-version">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="LORAWAN_1_0_0">
-                          LoRaWAN 1.0.0
-                        </SelectItem>
-                        <SelectItem value="LORAWAN_1_0_1">
-                          LoRaWAN 1.0.1
-                        </SelectItem>
-                        <SelectItem value="LORAWAN_1_0_2">
-                          LoRaWAN 1.0.2
-                        </SelectItem>
-                        <SelectItem value="LORAWAN_1_0_3">
-                          LoRaWAN 1.0.3
-                        </SelectItem>
-                        <SelectItem value="LORAWAN_1_0_4">
-                          LoRaWAN 1.0.4
-                        </SelectItem>
-                        <SelectItem value="LORAWAN_1_1_0">
-                          LoRaWAN 1.1.0
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="profile-regional-params" className="mb-2">
-                      Regional Parameters Revision
-                    </Label>
-                    <Select
-                      value={newRegionalParams}
-                      onValueChange={setNewRegionalParams}
-                    >
-                      <SelectTrigger id="profile-regional-params">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="A">A</SelectItem>
-                        <SelectItem value="B">B</SelectItem>
-                        <SelectItem value="C">C</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="supports-otaa"
-                      checked={newSupportsOtaa}
-                      onChange={(e) => setNewSupportsOtaa(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Input
+                      id="edit-description"
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Enter profile description (optional)"
                     />
-                    <Label htmlFor="supports-otaa" className="cursor-pointer">
-                      Supports OTAA (Join)
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id="supports-32bit"
-                      checked={newSupports32Bit}
-                      onChange={(e) => setNewSupports32Bit(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300"
-                    />
-                    <Label htmlFor="supports-32bit" className="cursor-pointer">
-                      Supports 32-bit Frame Counter
-                    </Label>
                   </div>
                 </div>
-
-                <div>
-                  <Label htmlFor="profile-description" className="mb-2">
-                    Description
-                  </Label>
-                  <Input
-                    id="profile-description"
-                    value={newDescription}
-                    onChange={(e) => setNewDescription(e.target.value)}
-                    placeholder="Enter profile description (optional)"
-                  />
-                </div>
-
-                <div className="flex items-end">
+                <DialogFooter>
                   <Button
-                    type="submit"
-                    disabled={!selectedTenant || !newName.trim()}
-                    className="w-full sm:w-auto"
+                    variant="outline"
+                    onClick={() => setIsEditDialogOpen(false)}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Profile
+                    Cancel
                   </Button>
-                </div>
-              </form>
-            </div>
-          </CardContent>
-        </Card>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Device Profiles</CardTitle>
-            <CardDescription>
-              {selectedTenant
-                ? `${profiles.length} profile${
-                    profiles.length !== 1 ? "s" : ""
-                  } from ERPNext`
-                : "Select a tenant to view device profiles"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Profile Name</TableHead>
-                    <TableHead>ChirpStack ID</TableHead>
-                    <TableHead>Region(s)</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>MAC Version</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <Skeleton className="h-6 w-20" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-32" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-24" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-6 w-16" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-40" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-28" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-28" />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Skeleton className="h-8 w-16" />
-                            <Skeleton className="h-8 w-16" />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <>
-                      {profiles.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={8}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            {selectedTenant
-                              ? "No device profiles found"
-                              : "Select a tenant to view device profiles"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        profiles.map((p) => {
-                          const regions = parseRegions(p.region);
-                          return (
-                            <TableRow key={p.name}>
-                              <TableCell className="font-mono text-sm">
-                                <Badge variant="outline">
-                                  {p.name?.substring(0, 8)}...
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {p.profile_name || "—"}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {p.chirpstack_id || "—"}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {regions.length > 0 ? (
-                                    regions.map((region, idx) => (
-                                      <Badge
-                                        key={idx}
-                                        variant="outline"
-                                        className="text-xs"
-                                      >
-                                        {region}
-                                      </Badge>
-                                    ))
-                                  ) : (
-                                    <span className="text-muted-foreground text-sm">
-                                      —
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {p.small_text || "—"}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {p.mac_version || "—"}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {formatERPNextDate(p.creation)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEdit(p)}
-                                  >
-                                    <Edit className="w-4 h-4 mr-1" />
-                                    Edit
-                                  </Button>
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button variant="destructive" size="sm">
-                                        <Trash2 className="w-4 h-4 mr-1" />
-                                        Delete
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>
-                                          Delete Device Profile
-                                        </AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete &quot;
-                                          {p.profile_name || p.name}&quot;? This
-                                          action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>
-                                          Cancel
-                                        </AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleDelete(p)}
-                                        >
-                                          Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      )}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Device Profile</DialogTitle>
-              <DialogDescription>
-                Update the device profile details. Changes will be synced with
-                ChirpStack.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Profile Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Enter profile name"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-region">Region</Label>
-                  <Select value={editRegion} onValueChange={setEditRegion}>
-                    <SelectTrigger id="edit-region">
-                      <SelectValue placeholder="Select region..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REGIONS.map((region) => (
-                        <SelectItem key={region} value={region}>
-                          {region}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-mac-version">MAC Version</Label>
-                  <Select
-                    value={editMacVersion}
-                    onValueChange={setEditMacVersion}
-                  >
-                    <SelectTrigger id="edit-mac-version">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="LORAWAN_1_0_0">
-                        LoRaWAN 1.0.0
-                      </SelectItem>
-                      <SelectItem value="LORAWAN_1_0_1">
-                        LoRaWAN 1.0.1
-                      </SelectItem>
-                      <SelectItem value="LORAWAN_1_0_2">
-                        LoRaWAN 1.0.2
-                      </SelectItem>
-                      <SelectItem value="LORAWAN_1_0_3">
-                        LoRaWAN 1.0.3
-                      </SelectItem>
-                      <SelectItem value="LORAWAN_1_0_4">
-                        LoRaWAN 1.0.4
-                      </SelectItem>
-                      <SelectItem value="LORAWAN_1_1_0">
-                        LoRaWAN 1.1.0
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-regional-params">
-                    Regional Parameters Revision
-                  </Label>
-                  <Select
-                    value={editRegionalParams}
-                    onValueChange={setEditRegionalParams}
-                  >
-                    <SelectTrigger id="edit-regional-params">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A">A</SelectItem>
-                      <SelectItem value="B">B</SelectItem>
-                      <SelectItem value="C">C</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="edit-supports-otaa"
-                    checked={editSupportsOtaa}
-                    onChange={(e) => setEditSupportsOtaa(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label
-                    htmlFor="edit-supports-otaa"
-                    className="cursor-pointer"
-                  >
-                    Supports OTAA (Join)
-                  </Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="edit-supports-32bit"
-                    checked={editSupports32Bit}
-                    onChange={(e) => setEditSupports32Bit(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300"
-                  />
-                  <Label
-                    htmlFor="edit-supports-32bit"
-                    className="cursor-pointer"
-                  >
-                    Supports 32-bit Frame Counter
-                  </Label>
-                </div>
-              </div>
-              <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Input
-                  id="edit-description"
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  placeholder="Enter profile description (optional)"
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button onClick={handleSaveEdit}>Save Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-    </div>
+                  <Button onClick={handleSaveEdit}>Save Changes</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

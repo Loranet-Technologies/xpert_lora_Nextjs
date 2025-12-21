@@ -11,6 +11,7 @@ import {
   User,
   LogOut,
   List,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,59 +36,95 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useNavigation } from "@/components/customHooks/useNavigation";
+import { mapPathToTab } from "@/utils/mapPathToTab";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 // This is the data for the navigation items
 const navigationItems = [
   {
+    title: "Dashboard",
+    icon: LayoutDashboard,
+    id: "dashboard",
+    path: "/pages/dashboard",
+  },
+  {
     title: "Organizations",
     icon: Building2,
     id: "organizations",
+    path: "/pages/organizations",
   },
   {
     title: "Applications",
     icon: ClipboardList,
     id: "applications",
+    path: "/pages/applications",
   },
   {
     title: "Device Profile",
     icon: Settings,
     id: "deviceProfile",
+    path: "/pages/deviceProfile",
   },
   {
     title: "Devices",
     icon: Smartphone,
     id: "devices",
+    path: "/pages/devices",
   },
   {
     title: "Gateway",
     icon: Radio,
     id: "gateway",
+    path: "/pages/gateway",
   },
   {
     title: "Gateway List",
     icon: List,
     id: "gatewayList",
+    path: "/pages/gateway-list",
   },
   {
     title: "Admin Dashboard",
     icon: BarChart3,
     id: "Admin-Dashboard",
+    path: "/pages/Admin-Dashbaord",
     roles: ["admin_role"],
   },
   {
     title: "User Dashboard",
     icon: User,
     id: "Userdashboard",
+    path: "/pages/userDashaboard",
   },
 ];
 
 interface AppSidebarProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+  activeTab?: string;
+  setActiveTab?: (tab: string) => void;
 }
 
-export function AppSidebar({ activeTab, setActiveTab }: AppSidebarProps) {
+export function AppSidebar({
+  activeTab: propActiveTab,
+  setActiveTab: propSetActiveTab,
+}: AppSidebarProps) {
   const { user, logout, roles } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const { activeTab: hookActiveTab, setActiveTabState } = useNavigation();
+
+  // Use prop values if provided, otherwise use hook values
+  const activeTab = propActiveTab ?? hookActiveTab;
+  const setActiveTab = propSetActiveTab ?? setActiveTabState;
+
+  // Update the activeTab based on the current pathname
+  useEffect(() => {
+    if (pathname) {
+      const tab = mapPathToTab(pathname);
+      setActiveTab(tab);
+    }
+  }, [pathname, setActiveTab]);
 
   // Filter items based on user roles if needed
   const filteredItems = navigationItems.filter((item) => {
@@ -96,6 +133,12 @@ export function AppSidebar({ activeTab, setActiveTab }: AppSidebarProps) {
     }
     return true;
   });
+
+  // Handle navigation when sidebar item is clicked
+  const handleNavigation = (path: string, id: string) => {
+    setActiveTab(id);
+    router.push(path);
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -128,7 +171,7 @@ export function AppSidebar({ activeTab, setActiveTab }: AppSidebarProps) {
                   <SidebarMenuButton
                     tooltip={item.title}
                     isActive={activeTab === item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => handleNavigation(item.path, item.id)}
                   >
                     <item.icon />
                     <span>{item.title}</span>
