@@ -12,6 +12,12 @@ import {
   updateERPNextDevice,
   deleteERPNextDevice,
 } from "../../../lib/api/api";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -364,8 +370,14 @@ export default function DevicesAdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-6">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
         <div className="flex items-center gap-3">
           <Smartphone className="h-8 w-8 text-primary" />
           <div>
@@ -793,7 +805,9 @@ export default function DevicesAdminPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

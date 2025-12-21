@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { streamGatewayFrames, getERPNextGateway } from "@/lib/api/api";
 import {
   SidebarProvider,
@@ -67,37 +67,7 @@ type Gateway = {
 export default function GatewayFrames() {
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
   const gatewayId = params?.id as string;
-
-  // Map navigation IDs to routes
-  const routeMap: Record<string, string> = {
-    organizations: "/",
-    applications: "/",
-    deviceProfile: "/",
-    devices: "/",
-    gateway: "/",
-    gatewayList: "/pages/gateway-list",
-    "Admin-Dashboard": "/",
-    Userdashboard: "/",
-  };
-
-  // Determine active tab from pathname
-  const getActiveTab = (): string => {
-    if (pathname?.includes("/gateway-list")) return "gatewayList";
-    return "gatewayList"; // Default to gatewayList for this page
-  };
-
-  const [activeTab, setActiveTab] = useState<string>(() => getActiveTab());
-
-  // Handle navigation when sidebar item is clicked
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    const route = routeMap[tab];
-    if (route) {
-      router.push(route);
-    }
-  };
 
   // Frame streaming state
   const [frames, setFrames] = useState<GatewayFrame[]>([]);
@@ -189,12 +159,6 @@ export default function GatewayFrames() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gatewayId]);
 
-  // Update active tab when pathname changes
-  useEffect(() => {
-    setActiveTab(getActiveTab());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname]);
-
   function formatTimestamp(timestamp?: number): string {
     if (!timestamp) return "—";
     return new Date(timestamp).toLocaleString();
@@ -210,7 +174,7 @@ export default function GatewayFrames() {
 
   return (
     <SidebarProvider>
-      <AppSidebar activeTab={activeTab} setActiveTab={handleTabChange} />
+      <AppSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />

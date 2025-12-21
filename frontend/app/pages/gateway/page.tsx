@@ -7,6 +7,12 @@ import {
   fetchERPNextGateways,
   fetchERPNextTenants,
 } from "../../../lib/api/api";
+import {
+  SidebarProvider,
+  SidebarInset,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -197,8 +203,14 @@ export default function GatewayAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-6">
+          <div className="mx-auto w-full max-w-6xl space-y-8">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Radio className="h-6 w-6" />
@@ -458,7 +470,9 @@ export default function GatewayAdminPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </div>
-    </div>
+          </div>
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
