@@ -1201,6 +1201,68 @@ export async function deleteERPNextDeviceProfile(deviceProfileId: string) {
   }
 }
 
+// ERPNext Device API - List devices from ERPNext (similar to listERPNextGateways)
+export async function listERPNextDevices(params?: {
+  filters?: string | Record<string, any>;
+  limit?: number;
+  offset?: number;
+}) {
+  try {
+    // Get ERPNext token (with automatic fallback to Keycloak token)
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+    if (params?.limit) {
+      queryParams.append("limit", params.limit.toString());
+    }
+    if (params?.offset) {
+      queryParams.append("offset", params.offset.toString());
+    }
+    if (params?.filters) {
+      const filtersStr =
+        typeof params.filters === "string"
+          ? params.filters
+          : JSON.stringify(params.filters);
+      queryParams.append("filters", filtersStr);
+    }
+
+    // Use fetch directly to include ERPNext token in Authorization header
+    const response = await fetch(
+      `/api/erpnext/device?${queryParams.toString()}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: "Failed to list devices",
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to list ERPNext devices:", error);
+    throw error;
+  }
+}
+
 // ERPNext Device API - Fetch devices from ERPNext
 export async function fetchERPNextDevices(params?: {
   fields?: string[];
@@ -1754,6 +1816,115 @@ export async function streamGatewayFrames(
     };
   } catch (error) {
     console.error("Failed to stream gateway frames:", error);
+    if (onError) {
+      onError(error instanceof Error ? error : new Error(String(error)));
+    }
+    throw error;
+  }
+}
+
+// Device Events SSE Stream using fetch (supports auth headers)
+export async function streamDeviceEvents(
+  deviceEui: string,
+  onMessage: (event: any) => void,
+  onError?: (error: Error) => void
+): Promise<() => void> {
+  try {
+    // Get ERPNext token
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    // Use Next.js API route as proxy to avoid CORS issues
+    const url = `/api/erpnext/device-events?device_eui=${encodeURIComponent(
+      deviceEui
+    )}`;
+
+    // Use fetch with streaming
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "text/event-stream",
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        message: `HTTP error! status: ${response.status}`,
+      }));
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    if (!response.body) {
+      throw new Error("Response body is null");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let isStreaming = true;
+
+    // Read stream
+    const readStream = async () => {
+      try {
+        while (isStreaming) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            isStreaming = false;
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.startsWith("data: ")) {
+              try {
+                const data = line.slice(6); // Remove "data: " prefix
+                if (data.trim()) {
+                  const event = JSON.parse(data);
+                  onMessage(event);
+                }
+              } catch (parseError) {
+                console.error("Failed to parse event data:", parseError);
+              }
+            }
+          }
+        }
+      } catch (streamError) {
+        isStreaming = false;
+        if (onError) {
+          onError(
+            streamError instanceof Error
+              ? streamError
+              : new Error(String(streamError))
+          );
+        }
+      }
+    };
+
+    // Start reading
+    readStream();
+
+    // Return cleanup function
+    return () => {
+      isStreaming = false;
+      reader.cancel().catch((err) => {
+        console.error("Error canceling stream:", err);
+      });
+    };
+  } catch (error) {
+    console.error("Failed to stream device events:", error);
     if (onError) {
       onError(error instanceof Error ? error : new Error(String(error)));
     }

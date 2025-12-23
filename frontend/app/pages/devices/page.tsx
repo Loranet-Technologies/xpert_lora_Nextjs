@@ -65,7 +65,14 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Edit, Trash2, Smartphone } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Smartphone,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 
 // ERPNext Tenant type
 type Tenant = {
@@ -378,433 +385,443 @@ export default function DevicesAdminPage() {
         </header>
         <div className="flex flex-1 flex-col gap-4 p-6">
           <div className="mx-auto w-full max-w-6xl space-y-8">
-        <div className="flex items-center gap-3">
-          <Smartphone className="h-8 w-8 text-primary" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Device Management
-            </h1>
-            <p className="text-muted-foreground">
-              Manage IoT devices from ERPNext
-            </p>
-          </div>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" />
-              Create New Device
-            </CardTitle>
-            <CardDescription>
-              Create a new device in ERPNext. The device will be synced with
-              ChirpStack.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="tenant-select">Tenant</Label>
-                <Select
-                  value={selectedTenant}
-                  onValueChange={(value) => {
-                    setSelectedTenant(value);
-                    setSelectedApp("");
-                  }}
-                >
-                  <SelectTrigger id="tenant-select">
-                    <SelectValue placeholder="Select tenant..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tenants.map((t) => (
-                      <SelectItem key={t.name} value={t.name}>
-                        {t.tenant_name || t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="app-select">Application</Label>
-                <Select
-                  value={selectedApp}
-                  onValueChange={setSelectedApp}
-                  disabled={!selectedTenant}
-                >
-                  <SelectTrigger id="app-select">
-                    <SelectValue placeholder="Select application..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {apps.map((a) => (
-                      <SelectItem key={a.name} value={a.name}>
-                        {a.application_name || a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="flex items-center gap-3">
+              <Smartphone className="h-8 w-8 text-primary" />
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Device Management
+                </h1>
+                <p className="text-muted-foreground">
+                  Manage IoT devices from ERPNext
+                </p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="profile-select">Device Profile</Label>
-              <Select
-                value={selectedProfile}
-                onValueChange={setSelectedProfile}
-                disabled={!selectedTenant}
-              >
-                <SelectTrigger id="profile-select">
-                  <SelectValue placeholder="Select device profile..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {profiles.map((p) => (
-                    <SelectItem key={p.name} value={p.name}>
-                      {p.profile_name || p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <form onSubmit={onCreate} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="device-name">Device Name *</Label>
-                  <Input
-                    id="device-name"
-                    placeholder="Enter device name..."
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="dev-eui">DevEUI *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="dev-eui"
-                      placeholder="Enter DevEUI (16 hex characters)..."
-                      value={form.devEui}
-                      onChange={(e) =>
-                        setForm({ ...form, devEui: e.target.value })
-                      }
-                      required
-                      className="flex-1"
-                      pattern="[0-9a-fA-F]{16}"
-                      maxLength={16}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={generateRandomDevEui}
-                      className="px-3"
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="w-5 h-5" />
+                  Create New Device
+                </CardTitle>
+                <CardDescription>
+                  Create a new device in ERPNext. The device will be synced with
+                  ChirpStack.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="tenant-select">Tenant</Label>
+                    <Select
+                      value={selectedTenant}
+                      onValueChange={(value) => {
+                        setSelectedTenant(value);
+                        setSelectedApp("");
+                      }}
                     >
-                      Generate
-                    </Button>
+                      <SelectTrigger id="tenant-select">
+                        <SelectValue placeholder="Select tenant..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tenants.map((t) => (
+                          <SelectItem key={t.name} value={t.name}>
+                            {t.tenant_name || t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="app-select">Application</Label>
+                    <Select
+                      value={selectedApp}
+                      onValueChange={setSelectedApp}
+                      disabled={!selectedTenant}
+                    >
+                      <SelectTrigger id="app-select">
+                        <SelectValue placeholder="Select application..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {apps.map((a) => (
+                          <SelectItem key={a.name} value={a.name}>
+                            {a.application_name || a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="device-type-select">Device Sync</Label>
+                    <Button variant="outline">Sync from ChirpStack</Button>
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="device-description">Description</Label>
-                  <Input
-                    id="device-description"
-                    placeholder="Enter description (optional)..."
-                    value={form.description}
-                    onChange={(e) =>
-                      setForm({ ...form, description: e.target.value })
-                    }
-                  />
+                  <Label htmlFor="profile-select">Device Profile</Label>
+                  <Select
+                    value={selectedProfile}
+                    onValueChange={setSelectedProfile}
+                    disabled={!selectedTenant}
+                  >
+                    <SelectTrigger id="profile-select">
+                      <SelectValue placeholder="Select device profile..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {profiles.map((p) => (
+                        <SelectItem key={p.name} value={p.name}>
+                          {p.profile_name || p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <div className="flex items-end">
-                <Button
-                  type="submit"
-                  disabled={
-                    !selectedApp ||
-                    !selectedProfile ||
-                    !form.name.trim() ||
-                    !form.devEui.trim() ||
-                    loading
-                  }
-                  className="w-full sm:w-auto"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Device
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
 
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+                <form onSubmit={onCreate} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="device-name">Device Name *</Label>
+                      <Input
+                        id="device-name"
+                        placeholder="Enter device name..."
+                        value={form.name}
+                        onChange={(e) =>
+                          setForm({ ...form, name: e.target.value })
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="dev-eui">DevEUI *</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="dev-eui"
+                          placeholder="Enter DevEUI (16 hex characters)..."
+                          value={form.devEui}
+                          onChange={(e) =>
+                            setForm({ ...form, devEui: e.target.value })
+                          }
+                          required
+                          className="flex-1"
+                          pattern="[0-9a-fA-F]{16}"
+                          maxLength={16}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={generateRandomDevEui}
+                          className="px-3"
+                        >
+                          Generate
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="device-description">Description</Label>
+                      <Input
+                        id="device-description"
+                        placeholder="Enter description (optional)..."
+                        value={form.description}
+                        onChange={(e) =>
+                          setForm({ ...form, description: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="submit"
+                      disabled={
+                        !selectedApp ||
+                        !selectedProfile ||
+                        !form.name.trim() ||
+                        !form.devEui.trim() ||
+                        loading
+                      }
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Device
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
 
-        {success && (
-          <Alert>
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )}
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Devices</CardTitle>
-            <CardDescription>
-              {selectedApp
-                ? `${devices.length} device${
-                    devices.length !== 1 ? "s" : ""
-                  } from ERPNext`
-                : "Select an application to view devices"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Device Name</TableHead>
-                    <TableHead>DevEUI</TableHead>
-                    <TableHead>ChirpStack ID</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loading ? (
-                    Array.from({ length: 5 }).map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <Skeleton className="h-6 w-20" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-32" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-32" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-24" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-6 w-16" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-40" />
-                        </TableCell>
-                        <TableCell>
-                          <Skeleton className="h-5 w-28" />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Skeleton className="h-8 w-16" />
-                            <Skeleton className="h-8 w-16" />
-                          </div>
-                        </TableCell>
+            {success && (
+              <Alert>
+                <AlertDescription>{success}</AlertDescription>
+              </Alert>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Devices</CardTitle>
+                <CardDescription>
+                  {selectedApp
+                    ? `${devices.length} device${
+                        devices.length !== 1 ? "s" : ""
+                      } from ERPNext`
+                    : "Select an application to view devices"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Device Name</TableHead>
+                        <TableHead>DevEUI</TableHead>
+                        <TableHead>ChirpStack ID</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))
-                  ) : (
-                    <>
-                      {devices.length === 0 ? (
-                        <TableRow>
-                          <TableCell
-                            colSpan={8}
-                            className="text-center py-8 text-muted-foreground"
-                          >
-                            {selectedApp
-                              ? "No devices found"
-                              : "Select an application to view devices"}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        devices.map((d) => (
-                          <TableRow key={d.name}>
-                            <TableCell className="font-mono text-sm">
-                              <Badge variant="outline">
-                                {d.name?.substring(0, 8)}...
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              {d.device_name || "—"}
-                            </TableCell>
-                            <TableCell className="font-mono text-sm">
-                              {d.dev_eui || "—"}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {d.chirpstack_id || "—"}
+                    </TableHeader>
+                    <TableBody>
+                      {loading ? (
+                        Array.from({ length: 5 }).map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <Skeleton className="h-6 w-20" />
                             </TableCell>
                             <TableCell>
-                              <Badge
-                                variant={
-                                  d.status === "Active"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                              >
-                                {d.status || "—"}
-                              </Badge>
+                              <Skeleton className="h-5 w-32" />
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {d.description || "—"}
+                            <TableCell>
+                              <Skeleton className="h-5 w-32" />
                             </TableCell>
-                            <TableCell className="text-muted-foreground text-sm">
-                              {formatERPNextDate(d.creation)}
+                            <TableCell>
+                              <Skeleton className="h-5 w-24" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-6 w-16" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-40" />
+                            </TableCell>
+                            <TableCell>
+                              <Skeleton className="h-5 w-28" />
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditDialog({
-                                      open: true,
-                                      device: d,
-                                      name: d.device_name || "",
-                                      description: d.description || "",
-                                      status: d.status || "Active",
-                                      deviceProfile: d.device_profile || "",
-                                    });
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-1" />
-                                  Edit
-                                </Button>
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" size="sm">
-                                      <Trash2 className="h-4 w-4 mr-1" />
-                                      Delete
-                                    </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Delete Device
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete &quot;
-                                        {d.device_name || d.name}&quot; (DevEUI:{" "}
-                                        {d.dev_eui || d.name})? This action
-                                        cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>
-                                        Cancel
-                                      </AlertDialogCancel>
-                                      <AlertDialogAction
-                                        onClick={() => {
-                                          setDeleteDialog({
-                                            open: true,
-                                            device: d,
-                                          });
-                                          setTimeout(() => handleDelete(), 0);
-                                        }}
-                                      >
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
+                                <Skeleton className="h-8 w-16" />
+                                <Skeleton className="h-8 w-16" />
                               </div>
                             </TableCell>
                           </TableRow>
                         ))
+                      ) : (
+                        <>
+                          {devices.length === 0 ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={8}
+                                className="text-center py-8 text-muted-foreground"
+                              >
+                                {selectedApp
+                                  ? "No devices found"
+                                  : "Select an application to view devices"}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            devices.map((d) => (
+                              <TableRow key={d.name}>
+                                <TableCell className="font-mono text-sm">
+                                  <Badge variant="outline">
+                                    {d.name?.substring(0, 8)}...
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {d.device_name || "—"}
+                                </TableCell>
+                                <TableCell className="font-mono text-sm">
+                                  {d.dev_eui || "—"}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {d.chirpstack_id || "—"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      d.status === "Active"
+                                        ? "default"
+                                        : "secondary"
+                                    }
+                                  >
+                                    {d.status || "—"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {d.description || "—"}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {formatERPNextDate(d.creation)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => {
+                                        setEditDialog({
+                                          open: true,
+                                          device: d,
+                                          name: d.device_name || "",
+                                          description: d.description || "",
+                                          status: d.status || "Active",
+                                          deviceProfile: d.device_profile || "",
+                                        });
+                                      }}
+                                    >
+                                      <Edit className="h-4 w-4 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm">
+                                          <Trash2 className="h-4 w-4 mr-1" />
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>
+                                            Delete Device
+                                          </AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete
+                                            &quot;
+                                            {d.device_name || d.name}&quot;
+                                            (DevEUI: {d.dev_eui || d.name})?
+                                            This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>
+                                            Cancel
+                                          </AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => {
+                                              setDeleteDialog({
+                                                open: true,
+                                                device: d,
+                                              });
+                                              setTimeout(
+                                                () => handleDelete(),
+                                                0
+                                              );
+                                            }}
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </>
                       )}
-                    </>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
 
-        <Dialog
-          open={editDialog.open}
-          onOpenChange={(open) => setEditDialog({ ...editDialog, open })}
-        >
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit Device</DialogTitle>
-              <DialogDescription>
-                Update the device details. Changes will be synced with
-                ChirpStack.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-name">Device Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editDialog.name}
-                  onChange={(e) =>
-                    setEditDialog({ ...editDialog, name: e.target.value })
-                  }
-                  placeholder="Enter device name..."
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Input
-                  id="edit-description"
-                  value={editDialog.description}
-                  onChange={(e) =>
-                    setEditDialog({
-                      ...editDialog,
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder="Enter description (optional)..."
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit-status">Status</Label>
-                <Select
-                  value={editDialog.status}
-                  onValueChange={(value) =>
-                    setEditDialog({ ...editDialog, status: value })
-                  }
-                >
-                  <SelectTrigger id="edit-status">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Disabled">Disabled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  setEditDialog({
-                    open: false,
-                    device: null,
-                    name: "",
-                    description: "",
-                    status: "Active",
-                    deviceProfile: "",
-                  })
-                }
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleEdit}
-                disabled={!editDialog.name.trim() || loading}
-              >
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+            <Dialog
+              open={editDialog.open}
+              onOpenChange={(open) => setEditDialog({ ...editDialog, open })}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Edit Device</DialogTitle>
+                  <DialogDescription>
+                    Update the device details. Changes will be synced with
+                    ChirpStack.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name">Device Name *</Label>
+                    <Input
+                      id="edit-name"
+                      value={editDialog.name}
+                      onChange={(e) =>
+                        setEditDialog({ ...editDialog, name: e.target.value })
+                      }
+                      placeholder="Enter device name..."
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Input
+                      id="edit-description"
+                      value={editDialog.description}
+                      onChange={(e) =>
+                        setEditDialog({
+                          ...editDialog,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Enter description (optional)..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-status">Status</Label>
+                    <Select
+                      value={editDialog.status}
+                      onValueChange={(value) =>
+                        setEditDialog({ ...editDialog, status: value })
+                      }
+                    >
+                      <SelectTrigger id="edit-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Active">Active</SelectItem>
+                        <SelectItem value="Inactive">Inactive</SelectItem>
+                        <SelectItem value="Disabled">Disabled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setEditDialog({
+                        open: false,
+                        device: null,
+                        name: "",
+                        description: "",
+                        status: "Active",
+                        deviceProfile: "",
+                      })
+                    }
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleEdit}
+                    disabled={!editDialog.name.trim() || loading}
+                  >
+                    Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </SidebarInset>
