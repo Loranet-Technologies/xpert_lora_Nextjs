@@ -7,8 +7,6 @@ import {
   Settings,
   Smartphone,
   Radio,
-  BarChart3,
-  User,
   LogOut,
   List,
   LayoutDashboard,
@@ -86,17 +84,10 @@ const navigationItems = [
     path: "/pages/gateway-list",
   },
   {
-    title: "Admin Dashboard",
-    icon: BarChart3,
-    id: "Admin-Dashboard",
-    path: "/pages/Admin-Dashbaord",
-    roles: ["admin_role"],
-  },
-  {
-    title: "User Dashboard",
-    icon: User,
-    id: "Userdashboard",
-    path: "/pages/userDashaboard",
+    title: "Device List",
+    icon: List,
+    id: "deviceList",
+    path: "/pages/device-list",
   },
 ];
 
@@ -109,7 +100,7 @@ export function AppSidebar({
   activeTab: propActiveTab,
   setActiveTab: propSetActiveTab,
 }: AppSidebarProps) {
-  const { user, logout, roles } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const { activeTab: hookActiveTab, setActiveTabState } = useNavigation();
@@ -125,14 +116,6 @@ export function AppSidebar({
       setActiveTab(tab);
     }
   }, [pathname, setActiveTab]);
-
-  // Filter items based on user roles if needed
-  const filteredItems = navigationItems.filter((item) => {
-    if (item.roles && roles) {
-      return item.roles.some((role) => roles.includes(role));
-    }
-    return true;
-  });
 
   // Handle navigation when sidebar item is clicked
   const handleNavigation = (path: string, id: string) => {
@@ -166,7 +149,7 @@ export function AppSidebar({
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     tooltip={item.title}
