@@ -7,7 +7,7 @@ import {
   fetchERPNextApplications,
   fetchERPNextDevices,
   fetchERPNextGateways,
-} from "./api";
+} from "./index";
 
 // Custom hooks for dashboard data
 export function useDashboardData() {

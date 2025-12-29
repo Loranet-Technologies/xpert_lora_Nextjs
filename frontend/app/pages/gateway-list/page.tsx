@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   listERPNextGateways,
   syncERPNextGateways,
-  fetchERPNextTenants,
-} from "@/lib/api/api";
+} from "@/lib/api/gateway/gateway";
+import { fetchERPNextTenants } from "@/lib/api/tenant/tenant";
 import {
   SidebarProvider,
   SidebarInset,

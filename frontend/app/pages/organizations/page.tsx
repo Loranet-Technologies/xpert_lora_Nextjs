@@ -8,7 +8,7 @@ import {
   createERPNextTenant,
   updateERPNextTenant,
   deleteERPNextTenant,
-} from "../../../lib/api/api";
+} from "@/lib/api/tenant/tenant";
 import {
   SidebarProvider,
   SidebarInset,

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     let response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_tenants?${queryParams}`,
+      `${ERPNEXT_API_URLS.LIST_TENANTS}?${queryParams}`,
       {
         method: "GET",
         headers,
@@ -84,14 +82,11 @@ export async function GET(request: NextRequest) {
           typeof filters === "string" ? filters : JSON.stringify(filters);
       }
 
-      response = await fetch(
-        `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_tenants`,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify(requestBody),
-        }
-      );
+      response = await fetch(ERPNEXT_API_URLS.LIST_TENANTS, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      });
     }
 
     // If the method endpoint still fails, fall back to resource endpoint
@@ -101,7 +96,7 @@ export async function GET(request: NextRequest) {
       );
       const fields = searchParams.get("fields") || '["*"]';
       const fallbackResponse = await fetch(
-        `${ERPNext_BASE_URL}/api/resource/Tenant?fields=${encodeURIComponent(
+        `${ERPNEXT_API_URLS.TENANT_RESOURCE}?fields=${encodeURIComponent(
           fields
         )}&limit_page_length=${limit}&limit_start=${offset}`,
         {
@@ -200,16 +195,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_tenant`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          data: body,
-        }),
-      }
-    );
+    const response = await fetch(ERPNEXT_API_URLS.CREATE_TENANT, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        data: body,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
@@ -246,16 +238,13 @@ export async function POST(request: NextRequest) {
 
       // Fetch the tenant again to get updated chirpstack_id
       try {
-        const getResponse = await fetch(
-          `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_tenant`,
-          {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              tenant_id: result.name,
-            }),
-          }
-        );
+        const getResponse = await fetch(ERPNEXT_API_URLS.GET_TENANT, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            tenant_id: result.name,
+          }),
+        });
 
         if (getResponse.ok) {
           const getData = await getResponse.json();

@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { streamGatewayFrames, getERPNextGateway } from "@/lib/api/api";
+import { streamGatewayFrames } from "@/lib/api/streams/streams";
+import { getERPNextGateway } from "@/lib/api/gateway/gateway";
 import {
   SidebarProvider,
   SidebarInset,

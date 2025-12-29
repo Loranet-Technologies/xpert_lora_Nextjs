@@ -1,7 +1,5 @@
 import { NextRequest } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build the ERPNext API URL
-    const url = `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.device_events?device_eui=${encodeURIComponent(
+    const url = `${ERPNEXT_API_URLS.DEVICE_EVENTS}?device_eui=${encodeURIComponent(
       deviceEui
     )}`;
 

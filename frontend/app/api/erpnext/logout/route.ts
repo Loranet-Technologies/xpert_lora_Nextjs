@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the logout request to ERPNext with token
-    await fetch(`${ERPNext_BASE_URL}/api/method/frappe.auth.logout`, {
+    await fetch(ERPNEXT_API_URLS.FRAPPE_LOGOUT, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

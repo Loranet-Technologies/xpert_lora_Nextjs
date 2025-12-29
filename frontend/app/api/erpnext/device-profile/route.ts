@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,9 +57,7 @@ export async function GET(request: NextRequest) {
         typeof filters === "string" ? filters : JSON.stringify(filters);
     }
 
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_device_profiles`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.LIST_DEVICE_PROFILES, {
         method: "POST",
         headers,
         body: JSON.stringify(requestBody),
@@ -76,7 +72,7 @@ export async function GET(request: NextRequest) {
 
       // Build resource endpoint URL with filters
       // Note: ERPNext doctype name is "Device Profile" with a space, so we need to URL encode it
-      let resourceUrl = `${ERPNext_BASE_URL}/api/resource/Device%20Profile?fields=${encodeURIComponent(
+      let resourceUrl = `${ERPNEXT_API_URLS.DEVICE_PROFILE_RESOURCE}?fields=${encodeURIComponent(
         fields
       )}&limit_page_length=${limit}&limit_start=${offset}`;
 
@@ -185,9 +181,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_device_profile`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.CREATE_DEVICE_PROFILE, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -244,9 +238,7 @@ export async function POST(request: NextRequest) {
 
       // Fetch the device profile again to get updated chirpstack_id
       try {
-        const getResponse = await fetch(
-          `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_device_profile`,
-          {
+        const getResponse = await fetch(ERPNEXT_API_URLS.GET_DEVICE_PROFILE, {
             method: "POST",
             headers,
             body: JSON.stringify({

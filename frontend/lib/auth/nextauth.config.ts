@@ -1,22 +1,16 @@
 import { NextAuthOptions } from "next-auth";
 import KeycloakProvider from "next-auth/providers/keycloak";
+import { KEYCLOAK_CONFIG, KEYCLOAK_API_URLS } from "@/lib/config/api.config";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     KeycloakProvider({
-      clientId:
-        process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ||
-        process.env.KEYCLOAK_CLIENT_ID ||
-        "loranet_xperts",
+      clientId: KEYCLOAK_CONFIG.CLIENT_ID,
       clientSecret:
-        process.env.KEYCLOAK_CLIENT_SECRET ||
-        "V13zkcvflWeAn6cNrwBioIUSFEnSq9Fa",
-      issuer: process.env.NEXT_PUBLIC_KEYCLOAK_URL
-        ? `${process.env.NEXT_PUBLIC_KEYCLOAK_URL}/realms/${
-            process.env.NEXT_PUBLIC_KEYCLOAK_REALM || "loranet_xperts"
-          }`
-        : process.env.KEYCLOAK_ISSUER ||
-          "https://keycloak.loranet.my/realms/loranet_xperts",
+        KEYCLOAK_CONFIG.CLIENT_SECRET || "V13zkcvflWeAn6cNrwBioIUSFEnSq9Fa",
+      issuer:
+        process.env.KEYCLOAK_ISSUER ||
+        `${KEYCLOAK_CONFIG.BASE_URL}/realms/${KEYCLOAK_CONFIG.REALM}`,
     }),
   ],
   callbacks: {
@@ -59,36 +53,19 @@ export const authOptions: NextAuthOptions = {
 
 async function refreshAccessToken(token: any) {
   try {
-    const keycloakUrl =
-      process.env.NEXT_PUBLIC_KEYCLOAK_URL ||
-      process.env.KEYCLOAK_URL ||
-      "https://keycloak.loranet.my";
-    const realm =
-      process.env.NEXT_PUBLIC_KEYCLOAK_REALM ||
-      process.env.KEYCLOAK_REALM ||
-      "loranet_xperts";
-    const clientId =
-      process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID ||
-      process.env.KEYCLOAK_CLIENT_ID ||
-      "loranet_xperts";
-    const clientSecret =
-      process.env.KEYCLOAK_CLIENT_SECRET || "V13zkcvflWeAn6cNrwBioIUSFEnSq9Fa";
-
-    const response = await fetch(
-      `${keycloakUrl}/realms/${realm}/protocol/openid-connect/token`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: new URLSearchParams({
-          grant_type: "refresh_token",
-          refresh_token: token.refreshToken as string,
-          client_id: clientId,
-          client_secret: clientSecret,
-        }),
-      }
-    );
+    const response = await fetch(KEYCLOAK_API_URLS.TOKEN, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: token.refreshToken as string,
+        client_id: KEYCLOAK_CONFIG.CLIENT_ID,
+        client_secret:
+          KEYCLOAK_CONFIG.CLIENT_SECRET || "V13zkcvflWeAn6cNrwBioIUSFEnSq9Fa",
+      }),
+    });
 
     const refreshedTokens = await response.json();
 
