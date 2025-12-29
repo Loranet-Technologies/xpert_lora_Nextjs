@@ -3,13 +3,13 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
+import { fetchERPNextTenants } from "@/lib/api/tenant/tenant";
 import {
-  fetchERPNextTenants,
   fetchERPNextDeviceProfiles,
   createERPNextDeviceProfile,
   updateERPNextDeviceProfile,
   deleteERPNextDeviceProfile,
-} from "../../../lib/api/api";
+} from "@/lib/api/device-profile/device-profile";
 import {
   SidebarProvider,
   SidebarInset,

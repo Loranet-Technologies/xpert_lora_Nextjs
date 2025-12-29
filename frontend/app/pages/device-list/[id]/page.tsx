@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { streamDeviceEvents, getERPNextDevice } from "@/lib/api/api";
+import { streamDeviceEvents } from "@/lib/api/streams/streams";
+import { getERPNextDevice } from "@/lib/api/device/device";
 import {
   SidebarProvider,
   SidebarInset,

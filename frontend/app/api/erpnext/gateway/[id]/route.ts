@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 // GET - Get a single gateway by ID
 export async function GET(
@@ -39,9 +37,7 @@ export async function GET(
 
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in the body
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_gateway`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.GET_GATEWAY, {
         method: "POST",
         headers,
         body: JSON.stringify({

@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 // POST - Sync gateways from ChirpStack
 export async function POST(request: NextRequest) {
@@ -44,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in query string
     const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.sync_gateways?tenant_id=${encodeURIComponent(tenant_id)}`,
+      `${ERPNEXT_API_URLS.SYNC_GATEWAYS}?tenant_id=${encodeURIComponent(tenant_id)}`,
       {
         method: "POST",
         headers,

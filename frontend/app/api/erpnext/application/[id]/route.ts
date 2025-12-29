@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 // GET - Get a single application by ID
 export async function GET(
@@ -39,9 +37,7 @@ export async function GET(
 
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in the body
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_application`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.GET_APPLICATION, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -117,9 +113,7 @@ export async function PUT(
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_application`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.UPDATE_APPLICATION, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -196,9 +190,7 @@ export async function DELETE(
 
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in the body
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_application`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.DELETE_APPLICATION, {
         method: "POST",
         headers,
         body: JSON.stringify({

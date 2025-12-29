@@ -11,7 +11,7 @@ import React, {
 import { useSession, signIn, signOut } from "next-auth/react";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
-import { loginWithERPNext } from "../api/api";
+import { loginWithERPNext } from "../api/auth/auth";
 
 // Development mode - set to true to bypass Keycloak for testing
 const DEV_MODE =

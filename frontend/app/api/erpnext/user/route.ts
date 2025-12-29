@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -40,9 +38,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/frappe.auth.get_logged_user`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.GET_LOGGED_USER, {
         method: "GET",
         headers,
       }

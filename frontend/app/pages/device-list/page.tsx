@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  listERPNextDevices,
-  fetchERPNextTenants,
-  fetchERPNextApplications,
-} from "@/lib/api/api";
+import { listERPNextDevices } from "@/lib/api/device/device";
+import { fetchERPNextTenants } from "@/lib/api/tenant/tenant";
+import { fetchERPNextApplications } from "@/lib/api/application/application";
 import {
   SidebarProvider,
   SidebarInset,

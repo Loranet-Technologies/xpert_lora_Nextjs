@@ -3,15 +3,15 @@
 import type React from "react";
 
 import { useEffect, useState } from "react";
+import { fetchERPNextTenants } from "@/lib/api/tenant/tenant";
+import { fetchERPNextApplications } from "@/lib/api/application/application";
 import {
-  fetchERPNextTenants,
-  fetchERPNextApplications,
   fetchERPNextDevices,
-  fetchERPNextDeviceProfiles,
   createERPNextDevice,
   updateERPNextDevice,
   deleteERPNextDevice,
-} from "../../../lib/api/api";
+} from "@/lib/api/device/device";
+import { fetchERPNextDeviceProfiles } from "@/lib/api/device-profile/device-profile";
 import {
   SidebarProvider,
   SidebarInset,
