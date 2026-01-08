@@ -9,6 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
 import { loginWithERPNext } from "../api/auth/auth";
@@ -65,6 +66,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -472,24 +474,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("erpnext_token");
         localStorage.removeItem("erpnext_session_active");
         Cookies.remove("erpnext_token");
+
+        // Reset state
+        setToken(null);
+        setRoles([]);
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthMethod(null);
+        setError(null);
+
+        // Redirect to login page
+        router.push("/");
       } else if (authMethod === "keycloak") {
         // NextAuth logout
         await signOut({
           callbackUrl: window.location.origin + "/",
         });
+      } else {
+        // Fallback: clear state and redirect if no auth method is set
+        setToken(null);
+        setRoles([]);
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthMethod(null);
+        setError(null);
+        router.push("/");
       }
-
-      // Reset state
-      setToken(null);
-      setRoles([]);
-      setUser(null);
-      setIsAuthenticated(false);
-      setAuthMethod(null);
-      setError(null);
     } catch (error) {
       console.error("Logout failed:", error);
+      // Even if logout fails, redirect to login page
+      router.push("/");
     }
-  }, [authMethod]);
+  }, [authMethod, router]);
 
   // Refresh token function (NextAuth handles this automatically)
   const refreshToken = useCallback(async () => {
