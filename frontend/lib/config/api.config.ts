@@ -80,6 +80,21 @@ export const ERPNEXT_API_URLS = {
 
   // Frappe Auth
   GET_LOGGED_USER: `${ERPNext_BASE_URL}/api/method/frappe.auth.get_logged_user`,
+
+  // Subscription endpoints
+  GET_SUBSCRIPTION_PLANS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription_plans`,
+  CREATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_subscription`,
+  GET_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription`,
+  GET_ORGANIZATION_SUBSCRIPTIONS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_organization_subscriptions`,
+  ATTACH_DEVICE_TO_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.attach_device_to_subscription`,
+  REMOVE_DEVICE_FROM_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.remove_device_from_subscription`,
+  GET_SUBSCRIPTION_DEVICES: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription_devices`,
+  UPDATE_SUBSCRIPTION_STATUS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_subscription_status`,
+  VALIDATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.validate_subscription`,
+  SUBSCRIPTION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscriptions`,
+  SUBSCRIPTION_DEVICE_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription Device`,
+  SUBSCRIPTION_PLAN_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscriptions Plan`,
+  ORGANIZATION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Organization`,
 };
 
 // Keycloak API URLs

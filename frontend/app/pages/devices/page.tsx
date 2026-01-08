@@ -13,6 +13,14 @@ import {
 } from "@/lib/api/device/device";
 import { fetchERPNextDeviceProfiles } from "@/lib/api/device-profile/device-profile";
 import {
+  getSubscriptionDeviceByDevice,
+  attachDeviceToSubscription,
+  removeDeviceFromSubscription,
+  getOrganizationSubscriptions,
+  type SubscriptionDevice,
+  type Subscription,
+} from "@/lib/api/subscription/subscription";
+import {
   SidebarProvider,
   SidebarInset,
   SidebarTrigger,
@@ -72,6 +80,10 @@ import {
   Smartphone,
   RefreshCw,
   Loader2,
+  Link2,
+  Unlink,
+  Pause,
+  CreditCard,
 } from "lucide-react";
 
 // ERPNext Tenant type
@@ -139,6 +151,36 @@ export default function DevicesAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", devEui: "", description: "" });
+
+  // Subscription Device state
+  const [subscriptionDevices, setSubscriptionDevices] = useState<
+    Record<string, { device: SubscriptionDevice; subscription?: Subscription }>
+  >({});
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState<
+    Record<string, boolean>
+  >({});
+  const [organizations, setOrganizations] = useState<
+    Array<{ name: string; organization_name: string }>
+  >([]);
+  const [attachDialog, setAttachDialog] = useState<{
+    open: boolean;
+    device: Device | null;
+    organizations: Array<{ name: string; organization_name: string }>;
+    selectedOrganization: string;
+    subscriptions: Subscription[];
+    selectedSubscription: string;
+    loading: boolean;
+    loadingSubscriptions: boolean;
+  }>({
+    open: false,
+    device: null,
+    organizations: [],
+    selectedOrganization: "",
+    subscriptions: [],
+    selectedSubscription: "",
+    loading: false,
+    loadingSubscriptions: false,
+  });
 
   function generateRandomDevEui() {
     const chars = "0123456789abcdef";
@@ -229,6 +271,7 @@ export default function DevicesAdminPage() {
   async function loadDevices(appId?: string) {
     if (!appId) {
       setDevices([]);
+      setSubscriptionDevices({});
       return;
     }
     setLoading(true);
@@ -245,8 +288,232 @@ export default function DevicesAdminPage() {
         (device: Device) => device.application === appId
       );
       setDevices(filteredData as Device[]);
+
+      // Load subscription info for all devices
+      await loadSubscriptionInfoForDevices(filteredData);
     } catch (e: any) {
       setError(e?.message || "Failed to load devices");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadSubscriptionInfoForDevices(deviceList: Device[]) {
+    // Load subscription info for each device in parallel
+    const promises = deviceList.map(async (device) => {
+      if (loadingSubscriptions[device.name]) return;
+
+      setLoadingSubscriptions((prev) => ({ ...prev, [device.name]: true }));
+      try {
+        const result = await getSubscriptionDeviceByDevice(device.name);
+        if (result.data) {
+          setSubscriptionDevices((prev) => ({
+            ...prev,
+            [device.name]: {
+              device: result.data!,
+              subscription: result.subscription,
+            },
+          }));
+        } else {
+          // Remove from state if no subscription
+          setSubscriptionDevices((prev) => {
+            const newState = { ...prev };
+            delete newState[device.name];
+            return newState;
+          });
+        }
+      } catch (e) {
+        console.error(
+          `Failed to load subscription for device ${device.name}:`,
+          e
+        );
+      } finally {
+        setLoadingSubscriptions((prev) => {
+          const newState = { ...prev };
+          delete newState[device.name];
+          return newState;
+        });
+      }
+    });
+    await Promise.all(promises);
+  }
+
+  async function loadSubscriptionInfo(deviceId: string) {
+    setLoadingSubscriptions((prev) => ({ ...prev, [deviceId]: true }));
+    try {
+      const result = await getSubscriptionDeviceByDevice(deviceId);
+      if (result.data) {
+        setSubscriptionDevices((prev) => ({
+          ...prev,
+          [deviceId]: {
+            device: result.data!,
+            subscription: result.subscription,
+          },
+        }));
+      } else {
+        setSubscriptionDevices((prev) => {
+          const newState = { ...prev };
+          delete newState[deviceId];
+          return newState;
+        });
+      }
+    } catch (e) {
+      console.error(`Failed to load subscription for device ${deviceId}:`, e);
+    } finally {
+      setLoadingSubscriptions((prev) => {
+        const newState = { ...prev };
+        delete newState[deviceId];
+        return newState;
+      });
+    }
+  }
+
+  async function loadOrganizations() {
+    try {
+      const token = await import("@/lib/api/utils/token").then((m) =>
+        m.getERPNextToken()
+      );
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
+      const response = await fetch("/api/erpnext/organization", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load organizations");
+      }
+
+      const data = await response.json();
+      const orgs = data.data || data.message?.data || data.message || [];
+      setOrganizations(orgs);
+      return orgs;
+    } catch (e: any) {
+      console.error("Failed to load organizations:", e);
+      throw e;
+    }
+  }
+
+  async function openAttachDialog(device: Device) {
+    setError(null);
+    setAttachDialog({
+      open: true,
+      device,
+      organizations: [],
+      selectedOrganization: "",
+      subscriptions: [],
+      selectedSubscription: "",
+      loading: true,
+      loadingSubscriptions: false,
+    });
+
+    try {
+      // Load organizations
+      const orgs = await loadOrganizations();
+      setAttachDialog((prev) => ({
+        ...prev,
+        organizations: orgs,
+        loading: false,
+      }));
+    } catch (e: any) {
+      setError(e?.message || "Failed to load organizations");
+      setAttachDialog((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  async function loadSubscriptionsForOrganization(organizationId: string) {
+    if (!organizationId) {
+      setAttachDialog((prev) => ({
+        ...prev,
+        subscriptions: [],
+        selectedSubscription: "",
+        loadingSubscriptions: false,
+      }));
+      return;
+    }
+
+    setAttachDialog((prev) => ({
+      ...prev,
+      loadingSubscriptions: true,
+      subscriptions: [],
+      selectedSubscription: "",
+    }));
+
+    try {
+      const result = await getOrganizationSubscriptions(organizationId);
+      setAttachDialog((prev) => ({
+        ...prev,
+        subscriptions: result.data || [],
+        loadingSubscriptions: false,
+      }));
+    } catch (e: any) {
+      setError(e?.message || "Failed to load subscriptions");
+      setAttachDialog((prev) => ({
+        ...prev,
+        subscriptions: [],
+        loadingSubscriptions: false,
+      }));
+    }
+  }
+
+  async function handleAttachDevice() {
+    if (!attachDialog.device || !attachDialog.selectedSubscription) {
+      setError("Please select a subscription");
+      return;
+    }
+
+    setError(null);
+    setSuccess(null);
+    setAttachDialog((prev) => ({ ...prev, loading: true }));
+
+    try {
+      await attachDeviceToSubscription({
+        subscription: attachDialog.selectedSubscription,
+        device: attachDialog.device.name,
+      });
+
+      setSuccess("Device attached to subscription successfully!");
+      await loadSubscriptionInfo(attachDialog.device.name);
+      setAttachDialog({
+        open: false,
+        device: null,
+        organizations: [],
+        selectedOrganization: "",
+        subscriptions: [],
+        selectedSubscription: "",
+        loading: false,
+        loadingSubscriptions: false,
+      });
+    } catch (e: any) {
+      setError(e?.message || "Failed to attach device");
+    } finally {
+      setAttachDialog((prev) => ({ ...prev, loading: false }));
+    }
+  }
+
+  async function handleRemoveDevice(
+    subscriptionDeviceId: string,
+    deviceId: string,
+    action: "disable" | "delete" = "disable"
+  ) {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+
+    try {
+      await removeDeviceFromSubscription(subscriptionDeviceId, action);
+      setSuccess(
+        `Device ${action === "disable" ? "suspended" : "removed"} successfully!`
+      );
+      await loadSubscriptionInfo(deviceId);
+    } catch (e: any) {
+      setError(e?.message || `Failed to ${action} device`);
     } finally {
       setLoading(false);
     }
@@ -581,6 +848,7 @@ export default function DevicesAdminPage() {
                         <TableHead>DevEUI</TableHead>
                         <TableHead>ChirpStack ID</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Subscription</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Created</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -606,6 +874,9 @@ export default function DevicesAdminPage() {
                               <Skeleton className="h-6 w-16" />
                             </TableCell>
                             <TableCell>
+                              <Skeleton className="h-6 w-24" />
+                            </TableCell>
+                            <TableCell>
                               <Skeleton className="h-5 w-40" />
                             </TableCell>
                             <TableCell>
@@ -624,7 +895,7 @@ export default function DevicesAdminPage() {
                           {devices.length === 0 ? (
                             <TableRow>
                               <TableCell
-                                colSpan={8}
+                                colSpan={9}
                                 className="text-center py-8 text-muted-foreground"
                               >
                                 {selectedApp
@@ -633,103 +904,245 @@ export default function DevicesAdminPage() {
                               </TableCell>
                             </TableRow>
                           ) : (
-                            devices.map((d) => (
-                              <TableRow key={d.name}>
-                                <TableCell className="font-mono text-sm">
-                                  <Badge variant="outline">
-                                    {d.name?.substring(0, 8)}...
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="font-medium">
-                                  {d.device_name || "—"}
-                                </TableCell>
-                                <TableCell className="font-mono text-sm">
-                                  {d.dev_eui || "—"}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground text-sm">
-                                  {d.chirpstack_id || "—"}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={
-                                      d.status === "Active"
-                                        ? "default"
-                                        : "secondary"
-                                    }
-                                  >
-                                    {d.status || "—"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-muted-foreground text-sm">
-                                  {d.description || "—"}
-                                </TableCell>
-                                <TableCell className="text-muted-foreground text-sm">
-                                  {formatERPNextDate(d.creation)}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        setEditDialog({
-                                          open: true,
-                                          device: d,
-                                          name: d.device_name || "",
-                                          description: d.description || "",
-                                          status: d.status || "Active",
-                                          deviceProfile: d.device_profile || "",
-                                        });
-                                      }}
+                            devices.map((d) => {
+                              const subscriptionInfo =
+                                subscriptionDevices[d.name];
+                              const isLoadingSub = loadingSubscriptions[d.name];
+
+                              return (
+                                <TableRow key={d.name}>
+                                  <TableCell className="font-mono text-sm">
+                                    <Badge variant="outline">
+                                      {d.name?.substring(0, 8)}...
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-medium">
+                                    {d.device_name || "—"}
+                                  </TableCell>
+                                  <TableCell className="font-mono text-sm">
+                                    {d.dev_eui || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {d.chirpstack_id || "—"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={
+                                        d.status === "Active"
+                                          ? "default"
+                                          : "secondary"
+                                      }
                                     >
-                                      <Edit className="h-4 w-4 mr-1" />
-                                      Edit
-                                    </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm">
-                                          <Trash2 className="h-4 w-4 mr-1" />
-                                          Delete
+                                      {d.status || "—"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    {isLoadingSub ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : subscriptionInfo ? (
+                                      <div className="flex flex-col gap-1">
+                                        <Badge
+                                          variant="outline"
+                                          className="w-fit"
+                                        >
+                                          <CreditCard className="h-3 w-3 mr-1" />
+                                          {subscriptionInfo.subscription
+                                            ?.plan_details?.plan_name ||
+                                            subscriptionInfo.device
+                                              .subscription}
+                                        </Badge>
+                                        <span className="text-xs text-green-500">
+                                          {subscriptionInfo.device.status ===
+                                          "Active" ? (
+                                            <span className="text-green-500">
+                                              Active
+                                            </span>
+                                          ) : (
+                                            <span className="text-red-500">
+                                              Inactive
+                                            </span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground text-sm">
+                                        Not attached
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {d.description || "—"}
+                                  </TableCell>
+                                  <TableCell className="text-muted-foreground text-sm">
+                                    {formatERPNextDate(d.creation)}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                          setEditDialog({
+                                            open: true,
+                                            device: d,
+                                            name: d.device_name || "",
+                                            description: d.description || "",
+                                            status: d.status || "Active",
+                                            deviceProfile:
+                                              d.device_profile || "",
+                                          });
+                                        }}
+                                      >
+                                        <Edit className="h-4 w-4 mr-1" />
+                                        Edit
+                                      </Button>
+                                      {subscriptionInfo ? (
+                                        <>
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                              >
+                                                <Pause className="h-4 w-4 mr-1" />
+                                                Suspend
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>
+                                                  Suspend Device from
+                                                  Subscription
+                                                </AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Are you sure you want to
+                                                  suspend this device from its
+                                                  subscription? The device will
+                                                  be disabled but the record
+                                                  will be kept.
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>
+                                                  Cancel
+                                                </AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() =>
+                                                    handleRemoveDevice(
+                                                      subscriptionInfo.device
+                                                        .name,
+                                                      d.name,
+                                                      "disable"
+                                                    )
+                                                  }
+                                                >
+                                                  Suspend
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                          <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                              >
+                                                <Unlink className="h-4 w-4 mr-1" />
+                                                Remove
+                                              </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                              <AlertDialogHeader>
+                                                <AlertDialogTitle>
+                                                  Remove Device from
+                                                  Subscription
+                                                </AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                  Are you sure you want to
+                                                  permanently remove this device
+                                                  from its subscription? This
+                                                  action cannot be undone.
+                                                </AlertDialogDescription>
+                                              </AlertDialogHeader>
+                                              <AlertDialogFooter>
+                                                <AlertDialogCancel>
+                                                  Cancel
+                                                </AlertDialogCancel>
+                                                <AlertDialogAction
+                                                  onClick={() =>
+                                                    handleRemoveDevice(
+                                                      subscriptionInfo.device
+                                                        .name,
+                                                      d.name,
+                                                      "delete"
+                                                    )
+                                                  }
+                                                >
+                                                  Remove
+                                                </AlertDialogAction>
+                                              </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                          </AlertDialog>
+                                        </>
+                                      ) : (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openAttachDialog(d)}
+                                        >
+                                          <Link2 className="h-4 w-4 mr-1" />
+                                          Attach
                                         </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>
-                                            Delete Device
-                                          </AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete
-                                            &quot;
-                                            {d.device_name || d.name}&quot;
-                                            (DevEUI: {d.dev_eui || d.name})?
-                                            This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>
-                                            Cancel
-                                          </AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => {
-                                              setDeleteDialog({
-                                                open: true,
-                                                device: d,
-                                              });
-                                              setTimeout(
-                                                () => handleDelete(),
-                                                0
-                                              );
-                                            }}
+                                      )}
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="destructive"
+                                            size="sm"
                                           >
+                                            <Trash2 className="h-4 w-4 mr-1" />
                                             Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>
+                                              Delete Device
+                                            </AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete
+                                              &quot;
+                                              {d.device_name || d.name}&quot;
+                                              (DevEUI: {d.dev_eui || d.name})?
+                                              This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>
+                                              Cancel
+                                            </AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => {
+                                                setDeleteDialog({
+                                                  open: true,
+                                                  device: d,
+                                                });
+                                                setTimeout(
+                                                  () => handleDelete(),
+                                                  0
+                                                );
+                                              }}
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })
                           )}
                         </>
                       )}
@@ -818,6 +1231,170 @@ export default function DevicesAdminPage() {
                     disabled={!editDialog.name.trim() || loading}
                   >
                     Save Changes
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog
+              open={attachDialog.open}
+              onOpenChange={(open) =>
+                setAttachDialog({ ...attachDialog, open })
+              }
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Attach Device to Subscription</DialogTitle>
+                  <DialogDescription>
+                    Link this device to a subscription plan. The device will be
+                    covered by the subscription&apos;s limits and billing.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {attachDialog.loading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <Label htmlFor="organization-select">
+                          Organization *
+                        </Label>
+                        <Select
+                          value={attachDialog.selectedOrganization}
+                          onValueChange={(value) => {
+                            setAttachDialog({
+                              ...attachDialog,
+                              selectedOrganization: value,
+                              selectedSubscription: "",
+                            });
+                            loadSubscriptionsForOrganization(value);
+                          }}
+                        >
+                          <SelectTrigger id="organization-select">
+                            <SelectValue placeholder="Select organization..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {attachDialog.organizations.map((org) => (
+                              <SelectItem key={org.name} value={org.name}>
+                                {org.organization_name || org.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Select the organization to view its subscriptions.
+                        </p>
+                      </div>
+                      <div>
+                        <Label htmlFor="subscription-select">
+                          Subscription *
+                        </Label>
+                        {attachDialog.loadingSubscriptions ? (
+                          <div className="flex items-center gap-2 py-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">
+                              Loading subscriptions...
+                            </span>
+                          </div>
+                        ) : (
+                          <Select
+                            value={attachDialog.selectedSubscription}
+                            onValueChange={(value) =>
+                              setAttachDialog({
+                                ...attachDialog,
+                                selectedSubscription: value,
+                              })
+                            }
+                            disabled={!attachDialog.selectedOrganization}
+                          >
+                            <SelectTrigger id="subscription-select">
+                              <SelectValue
+                                placeholder={
+                                  attachDialog.selectedOrganization
+                                    ? "Select subscription..."
+                                    : "Select organization first"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {attachDialog.subscriptions.length === 0 ? (
+                                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                                  {attachDialog.selectedOrganization
+                                    ? "No subscriptions found"
+                                    : "Select an organization first"}
+                                </div>
+                              ) : (
+                                attachDialog.subscriptions.map((sub) => (
+                                  <SelectItem key={sub.name} value={sub.name}>
+                                    {sub.plan_details?.plan_name ||
+                                      sub.plan ||
+                                      sub.name}{" "}
+                                    ({sub.status})
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Select a subscription to attach this device to.
+                        </p>
+                      </div>
+                      {attachDialog.device && (
+                        <div className="text-sm text-muted-foreground">
+                          <p>
+                            <strong>Device:</strong>{" "}
+                            {attachDialog.device.device_name ||
+                              attachDialog.device.name}
+                          </p>
+                          <p>
+                            <strong>DevEUI:</strong>{" "}
+                            {attachDialog.device.dev_eui || "—"}
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setAttachDialog({
+                        open: false,
+                        device: null,
+                        organizations: [],
+                        selectedOrganization: "",
+                        subscriptions: [],
+                        selectedSubscription: "",
+                        loading: false,
+                        loadingSubscriptions: false,
+                      })
+                    }
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAttachDevice}
+                    disabled={
+                      !attachDialog.selectedSubscription.trim() ||
+                      attachDialog.loading ||
+                      attachDialog.loadingSubscriptions
+                    }
+                  >
+                    {attachDialog.loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Attaching...
+                      </>
+                    ) : (
+                      <>
+                        <Link2 className="h-4 w-4 mr-2" />
+                        Attach Device
+                      </>
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>

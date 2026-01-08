@@ -10,6 +10,7 @@ import {
   LogOut,
   List,
   LayoutDashboard,
+  CreditCard,
 } from "lucide-react";
 import {
   Sidebar,
@@ -88,6 +89,12 @@ const navigationItems = [
     icon: List,
     id: "deviceList",
     path: "/pages/device-list",
+  },
+  {
+    title: "Subscription",
+    icon: CreditCard,
+    id: "subscription",
+    path: "/pages/subscription",
   },
 ];
 
