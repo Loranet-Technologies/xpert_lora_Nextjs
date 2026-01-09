@@ -45,6 +45,7 @@ export const ERPNEXT_API_URLS = {
   CREATE_DEVICE_PROFILE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_device_profile`,
   UPDATE_DEVICE_PROFILE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_device_profile`,
   DELETE_DEVICE_PROFILE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_device_profile`,
+  GET_DEVICE_PROFILE_DECODERS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_device_profile_decoders`,
   DEVICE_PROFILE_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Device Profile`,
 
   // Gateway endpoints
