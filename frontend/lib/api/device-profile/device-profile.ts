@@ -69,6 +69,8 @@ export async function createERPNextDeviceProfile(data: {
   regional_parameters_revision?: string;
   supports_otaa_join?: number;
   supports_32_bit_frame_counter?: number;
+  decoder?: string;
+  decoder_template?: string | null;
   metadata?: any;
 }) {
   try {
@@ -136,6 +138,8 @@ export async function updateERPNextDeviceProfile(
     regional_parameters_revision?: string;
     supports_otaa_join?: number;
     supports_32_bit_frame_counter?: number;
+    decoder?: string;
+    decoder_template?: string | null;
     metadata?: any;
   }
 ) {
@@ -219,4 +223,3 @@ export async function deleteERPNextDeviceProfile(deviceProfileId: string) {
     throw error;
   }
 }
-

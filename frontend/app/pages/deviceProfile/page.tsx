@@ -63,9 +63,14 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { Plus, Edit, Trash2, Building2, Settings } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DeviceProfileDecoder from "./DeviceProfileDecoder";
+import {
+  fetchDeviceProfileDecoders,
+  type DeviceProfileDecoder as DecoderTemplate,
+} from "@/lib/api/device-profile-decoder/device-profile-decoder";
 // ERPNext Tenant type
 type Tenant = {
   name: string;
@@ -91,6 +96,8 @@ type DeviceProfile = {
   regional_parameters_revision?: string;
   supports_otaa_join?: number;
   supports_32_bit_frame_counter?: number;
+  decoder?: string;
+  decoder_template?: string;
   metadata?: any;
 } & Record<string, any>;
 
@@ -159,6 +166,12 @@ export default function DeviceProfileAdminPage() {
   const [newRegionalParams, setNewRegionalParams] = useState("A");
   const [newSupportsOtaa, setNewSupportsOtaa] = useState(true);
   const [newSupports32Bit, setNewSupports32Bit] = useState(false);
+  const [newDecoder, setNewDecoder] = useState("");
+  const [newDecoderTemplate, setNewDecoderTemplate] = useState<string>("");
+  const [decoderTemplates, setDecoderTemplates] = useState<DecoderTemplate[]>(
+    []
+  );
+  const [loadingDecoders, setLoadingDecoders] = useState(false);
   const [editingProfile, setEditingProfile] = useState<DeviceProfile | null>(
     null
   );
@@ -169,6 +182,8 @@ export default function DeviceProfileAdminPage() {
   const [editRegionalParams, setEditRegionalParams] = useState("A");
   const [editSupportsOtaa, setEditSupportsOtaa] = useState(true);
   const [editSupports32Bit, setEditSupports32Bit] = useState(false);
+  const [editDecoder, setEditDecoder] = useState("");
+  const [editDecoderTemplate, setEditDecoderTemplate] = useState<string>("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   async function loadTenants() {
@@ -214,6 +229,7 @@ export default function DeviceProfileAdminPage() {
 
   useEffect(() => {
     loadTenants();
+    loadDecoderTemplates();
   }, []);
 
   useEffect(() => {
@@ -223,6 +239,46 @@ export default function DeviceProfileAdminPage() {
       setProfiles([]);
     }
   }, [selectedTenant]);
+
+  async function loadDecoderTemplates() {
+    setLoadingDecoders(true);
+    try {
+      const templates = await fetchDeviceProfileDecoders();
+      setDecoderTemplates(templates);
+    } catch (e: any) {
+      console.error("Failed to load decoder templates:", e);
+    } finally {
+      setLoadingDecoders(false);
+    }
+  }
+
+  function handleDecoderTemplateSelect(
+    templateId: string,
+    isEdit: boolean = false
+  ) {
+    // Handle "none" value to clear the decoder template
+    if (templateId === "none") {
+      if (isEdit) {
+        setEditDecoderTemplate("");
+        setEditDecoder("");
+      } else {
+        setNewDecoderTemplate("");
+        setNewDecoder("");
+      }
+      return;
+    }
+
+    const template = decoderTemplates.find((t) => t.name === templateId);
+    if (template) {
+      if (isEdit) {
+        setEditDecoderTemplate(templateId);
+        setEditDecoder(template.decoder);
+      } else {
+        setNewDecoderTemplate(templateId);
+        setNewDecoder(template.decoder);
+      }
+    }
+  }
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -253,6 +309,19 @@ export default function DeviceProfileAdminPage() {
         profileData.small_text = newDescription.trim();
       }
 
+      // Include decoder if provided
+      if (newDecoder && newDecoder.trim()) {
+        profileData.decoder = newDecoder.trim();
+      }
+
+      // Include decoder_template if provided
+      if (newDecoderTemplate && newDecoderTemplate.trim()) {
+        profileData.decoder_template = newDecoderTemplate.trim();
+      } else {
+        // Explicitly set to null if no template is selected
+        profileData.decoder_template = null;
+      }
+
       // Debug: Verify region has \n
       console.log("Creating device profile with data:", {
         ...profileData,
@@ -270,6 +339,8 @@ export default function DeviceProfileAdminPage() {
       setNewRegionalParams("A");
       setNewSupportsOtaa(true);
       setNewSupports32Bit(false);
+      setNewDecoder("");
+      setNewDecoderTemplate("");
       setSuccess("Device profile created successfully!");
       await loadProfiles(selectedTenant);
     } catch (e: any) {
@@ -298,6 +369,8 @@ export default function DeviceProfileAdminPage() {
     setEditRegionalParams(profile.regional_parameters_revision || "A");
     setEditSupportsOtaa(profile.supports_otaa_join === 1);
     setEditSupports32Bit(profile.supports_32_bit_frame_counter === 1);
+    setEditDecoder(profile.decoder || "");
+    setEditDecoderTemplate(profile.decoder_template || "");
     setIsEditDialogOpen(true);
   }
 
@@ -313,7 +386,7 @@ export default function DeviceProfileAdminPage() {
         regionValue = regionValue + "\n";
       }
 
-      await updateERPNextDeviceProfile(editingProfile.name, {
+      const updateData: any = {
         profile_name: editName.trim(),
         region: regionValue,
         small_text: editDescription.trim() || undefined,
@@ -321,7 +394,25 @@ export default function DeviceProfileAdminPage() {
         regional_parameters_revision: editRegionalParams || "A",
         supports_otaa_join: editSupportsOtaa ? 1 : 0,
         supports_32_bit_frame_counter: editSupports32Bit ? 1 : 0,
-      });
+      };
+
+      // Include decoder if provided
+      if (editDecoder && editDecoder.trim()) {
+        updateData.decoder = editDecoder.trim();
+      } else {
+        // If decoder is empty, send empty string to clear it
+        updateData.decoder = "";
+      }
+
+      // Include decoder_template if provided
+      if (editDecoderTemplate && editDecoderTemplate.trim()) {
+        updateData.decoder_template = editDecoderTemplate.trim();
+      } else {
+        // Explicitly set to null if no template is selected
+        updateData.decoder_template = null;
+      }
+
+      await updateERPNextDeviceProfile(editingProfile.name, updateData);
       setSuccess("Device profile updated successfully!");
       await loadProfiles(selectedTenant);
       setIsEditDialogOpen(false);
@@ -569,6 +660,77 @@ export default function DeviceProfileAdminPage() {
                             />
                           </div>
 
+                          <div>
+                            <Label
+                              htmlFor="decoder-template-select"
+                              className="mb-2"
+                            >
+                              Decoder Template (Optional)
+                            </Label>
+                            <Select
+                              value={newDecoderTemplate || "none"}
+                              onValueChange={(value) =>
+                                handleDecoderTemplateSelect(value, false)
+                              }
+                              disabled={loadingDecoders}
+                            >
+                              <SelectTrigger id="decoder-template-select">
+                                <SelectValue placeholder="Select a decoder template..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {loadingDecoders ? (
+                                  <SelectItem value="loading" disabled>
+                                    Loading templates...
+                                  </SelectItem>
+                                ) : decoderTemplates.length === 0 ? (
+                                  <SelectItem value="none" disabled>
+                                    No templates available
+                                  </SelectItem>
+                                ) : (
+                                  <>
+                                    <SelectItem value="none">
+                                      None (Custom)
+                                    </SelectItem>
+                                    {decoderTemplates.map((template) => (
+                                      <SelectItem
+                                        key={template.name}
+                                        value={template.name}
+                                      >
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">
+                                            {
+                                              template.device_profile_decoder_name
+                                            }
+                                          </span>
+                                          <span className="text-xs text-muted-foreground font-mono">
+                                            {template.name}
+                                          </span>
+                                        </div>
+                                      </SelectItem>
+                                    ))}
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div>
+                            <Label htmlFor="profile-decoder" className="mb-2">
+                              Decoder Code (JavaScript)
+                            </Label>
+                            <textarea
+                              id="profile-decoder"
+                              value={newDecoder}
+                              onChange={(e) => setNewDecoder(e.target.value)}
+                              placeholder="Enter JavaScript decoder code or select a template above"
+                              className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
+                              rows={10}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              JavaScript codec for decoding device payloads
+                            </p>
+                          </div>
+
                           <div className="flex items-end">
                             <Button
                               type="submit"
@@ -779,7 +941,7 @@ export default function DeviceProfileAdminPage() {
                     open={isEditDialogOpen}
                     onOpenChange={setIsEditDialogOpen}
                   >
-                    <DialogContent>
+                    <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
                       <DialogHeader>
                         <DialogTitle>Edit Device Profile</DialogTitle>
                         <DialogDescription>
@@ -787,134 +949,282 @@ export default function DeviceProfileAdminPage() {
                           synced with ChirpStack.
                         </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="edit-name">Profile Name *</Label>
-                          <Input
-                            id="edit-name"
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            placeholder="Enter profile name"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor="edit-region">Region</Label>
-                            <Select
-                              value={editRegion}
-                              onValueChange={setEditRegion}
-                            >
-                              <SelectTrigger id="edit-region">
-                                <SelectValue placeholder="Select region..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {REGIONS.map((region) => (
-                                  <SelectItem key={region} value={region}>
-                                    {region}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="edit-mac-version">
-                              MAC Version
-                            </Label>
-                            <Select
-                              value={editMacVersion}
-                              onValueChange={setEditMacVersion}
-                            >
-                              <SelectTrigger id="edit-mac-version">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="LORAWAN_1_0_0">
-                                  LoRaWAN 1.0.0
-                                </SelectItem>
-                                <SelectItem value="LORAWAN_1_0_1">
-                                  LoRaWAN 1.0.1
-                                </SelectItem>
-                                <SelectItem value="LORAWAN_1_0_2">
-                                  LoRaWAN 1.0.2
-                                </SelectItem>
-                                <SelectItem value="LORAWAN_1_0_3">
-                                  LoRaWAN 1.0.3
-                                </SelectItem>
-                                <SelectItem value="LORAWAN_1_0_4">
-                                  LoRaWAN 1.0.4
-                                </SelectItem>
-                                <SelectItem value="LORAWAN_1_1_0">
-                                  LoRaWAN 1.1.0
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label htmlFor="edit-regional-params">
-                              Regional Parameters Revision
-                            </Label>
-                            <Select
-                              value={editRegionalParams}
-                              onValueChange={setEditRegionalParams}
-                            >
-                              <SelectTrigger id="edit-regional-params">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="A">A</SelectItem>
-                                <SelectItem value="B">B</SelectItem>
-                                <SelectItem value="C">C</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="flex gap-4">
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="edit-supports-otaa"
-                              checked={editSupportsOtaa}
-                              onChange={(e) =>
-                                setEditSupportsOtaa(e.target.checked)
-                              }
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <Label
-                              htmlFor="edit-supports-otaa"
-                              className="cursor-pointer"
-                            >
-                              Supports OTAA (Join)
-                            </Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id="edit-supports-32bit"
-                              checked={editSupports32Bit}
-                              onChange={(e) =>
-                                setEditSupports32Bit(e.target.checked)
-                              }
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <Label
-                              htmlFor="edit-supports-32bit"
-                              className="cursor-pointer"
-                            >
-                              Supports 32-bit Frame Counter
-                            </Label>
-                          </div>
-                        </div>
-                        <div>
-                          <Label htmlFor="edit-description">Description</Label>
-                          <Input
-                            id="edit-description"
-                            value={editDescription}
-                            onChange={(e) => setEditDescription(e.target.value)}
-                            placeholder="Enter profile description (optional)"
-                          />
-                        </div>
+
+                      <div className="flex-1 overflow-y-auto pr-2">
+                        <Tabs defaultValue="basic" className="w-full">
+                          <TabsList className="grid w-full grid-cols-2 mb-4">
+                            <TabsTrigger value="basic">
+                              Basic Information
+                            </TabsTrigger>
+                            <TabsTrigger value="decoder">
+                              Decoder Settings
+                            </TabsTrigger>
+                          </TabsList>
+
+                          <TabsContent value="basic" className="space-y-4 mt-0">
+                            <div>
+                              <Label
+                                htmlFor="edit-name"
+                                className="text-sm font-medium"
+                              >
+                                Profile Name{" "}
+                                <span className="text-destructive">*</span>
+                              </Label>
+                              <Input
+                                id="edit-name"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                placeholder="Enter profile name"
+                                className="mt-1.5"
+                                required
+                              />
+                            </div>
+
+                            <Separator />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <Label
+                                  htmlFor="edit-region"
+                                  className="text-sm font-medium"
+                                >
+                                  Region
+                                </Label>
+                                <Select
+                                  value={editRegion}
+                                  onValueChange={setEditRegion}
+                                >
+                                  <SelectTrigger
+                                    id="edit-region"
+                                    className="mt-1.5"
+                                  >
+                                    <SelectValue placeholder="Select region..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {REGIONS.map((region) => (
+                                      <SelectItem key={region} value={region}>
+                                        {region}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label
+                                  htmlFor="edit-mac-version"
+                                  className="text-sm font-medium"
+                                >
+                                  MAC Version
+                                </Label>
+                                <Select
+                                  value={editMacVersion}
+                                  onValueChange={setEditMacVersion}
+                                >
+                                  <SelectTrigger
+                                    id="edit-mac-version"
+                                    className="mt-1.5"
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="LORAWAN_1_0_0">
+                                      LoRaWAN 1.0.0
+                                    </SelectItem>
+                                    <SelectItem value="LORAWAN_1_0_1">
+                                      LoRaWAN 1.0.1
+                                    </SelectItem>
+                                    <SelectItem value="LORAWAN_1_0_2">
+                                      LoRaWAN 1.0.2
+                                    </SelectItem>
+                                    <SelectItem value="LORAWAN_1_0_3">
+                                      LoRaWAN 1.0.3
+                                    </SelectItem>
+                                    <SelectItem value="LORAWAN_1_0_4">
+                                      LoRaWAN 1.0.4
+                                    </SelectItem>
+                                    <SelectItem value="LORAWAN_1_1_0">
+                                      LoRaWAN 1.1.0
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label
+                                  htmlFor="edit-regional-params"
+                                  className="text-sm font-medium"
+                                >
+                                  Regional Parameters
+                                </Label>
+                                <Select
+                                  value={editRegionalParams}
+                                  onValueChange={setEditRegionalParams}
+                                >
+                                  <SelectTrigger
+                                    id="edit-regional-params"
+                                    className="mt-1.5"
+                                  >
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="A">A</SelectItem>
+                                    <SelectItem value="B">B</SelectItem>
+                                    <SelectItem value="C">C</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-3">
+                              <Label className="text-sm font-medium">
+                                Capabilities
+                              </Label>
+                              <div className="flex flex-wrap gap-6">
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="edit-supports-otaa"
+                                    checked={editSupportsOtaa}
+                                    onChange={(e) =>
+                                      setEditSupportsOtaa(e.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <Label
+                                    htmlFor="edit-supports-otaa"
+                                    className="cursor-pointer text-sm font-normal"
+                                  >
+                                    Supports OTAA (Join)
+                                  </Label>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    id="edit-supports-32bit"
+                                    checked={editSupports32Bit}
+                                    onChange={(e) =>
+                                      setEditSupports32Bit(e.target.checked)
+                                    }
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                  />
+                                  <Label
+                                    htmlFor="edit-supports-32bit"
+                                    className="cursor-pointer text-sm font-normal"
+                                  >
+                                    Supports 32-bit Frame Counter
+                                  </Label>
+                                </div>
+                              </div>
+                            </div>
+
+                            <Separator />
+
+                            <div>
+                              <Label
+                                htmlFor="edit-description"
+                                className="text-sm font-medium"
+                              >
+                                Description
+                              </Label>
+                              <Input
+                                id="edit-description"
+                                value={editDescription}
+                                onChange={(e) =>
+                                  setEditDescription(e.target.value)
+                                }
+                                placeholder="Enter profile description (optional)"
+                                className="mt-1.5"
+                              />
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent
+                            value="decoder"
+                            className="space-y-4 mt-0"
+                          >
+                            <div>
+                              <Label
+                                htmlFor="edit-decoder-template-select"
+                                className="text-sm font-medium"
+                              >
+                                Decoder Template
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                                Select a template or use custom code
+                              </p>
+                              <Select
+                                value={editDecoderTemplate || "none"}
+                                onValueChange={(value) =>
+                                  handleDecoderTemplateSelect(value, true)
+                                }
+                                disabled={loadingDecoders}
+                              >
+                                <SelectTrigger id="edit-decoder-template-select">
+                                  <SelectValue placeholder="Select a decoder template..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {loadingDecoders ? (
+                                    <SelectItem value="loading" disabled>
+                                      Loading templates...
+                                    </SelectItem>
+                                  ) : decoderTemplates.length === 0 ? (
+                                    <SelectItem value="none" disabled>
+                                      No templates available
+                                    </SelectItem>
+                                  ) : (
+                                    <>
+                                      <SelectItem value="none">
+                                        None (Custom)
+                                      </SelectItem>
+                                      {decoderTemplates.map((template) => (
+                                        <SelectItem
+                                          key={template.name}
+                                          value={template.name}
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">
+                                              {
+                                                template.device_profile_decoder_name
+                                              }
+                                            </span>
+                                            <span className="text-xs text-muted-foreground font-mono">
+                                              {template.name}
+                                            </span>
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <Label
+                                htmlFor="edit-decoder"
+                                className="text-sm font-medium"
+                              >
+                                Decoder Code (JavaScript)
+                              </Label>
+                              <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                                JavaScript codec for decoding device payloads
+                              </p>
+                              <textarea
+                                id="edit-decoder"
+                                value={editDecoder}
+                                onChange={(e) => setEditDecoder(e.target.value)}
+                                placeholder="Enter JavaScript decoder code or select a template above"
+                                className="flex min-h-[250px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono resize-none"
+                                rows={12}
+                              />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
                       </div>
+
+                      <Separator className="my-4" />
+
                       <DialogFooter>
                         <Button
                           variant="outline"
