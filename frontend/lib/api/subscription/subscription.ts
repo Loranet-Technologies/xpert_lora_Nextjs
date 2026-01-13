@@ -598,6 +598,122 @@ export async function validateSubscription(subscriptionId: string): Promise<{
   }
 }
 
+// Update a subscription plan
+export async function updateSubscriptionPlan(
+  planId: string,
+  data: {
+    plan_name?: string;
+    billing_interval?: "Monthly" | "Yearly";
+    max_devices?: number;
+    included_data_mb?: number;
+    included_messages?: number;
+    overage_rate_per_mb?: number;
+    overage_rate_per_1k_messages?: number;
+  }
+): Promise<{
+  success: boolean;
+  data: SubscriptionPlan;
+}> {
+  try {
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/subscription/plan/${planId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to update subscription plan" };
+
+      try {
+        errorData = await response.json();
+        if (errorData.message && typeof errorData.message === "object") {
+          errorData.message =
+            errorData.message.exc_message ||
+            errorData.message.message ||
+            JSON.stringify(errorData.message);
+        }
+      } catch {
+        errorData = {
+          message: errorText || "Failed to update subscription plan",
+        };
+      }
+
+      throw new Error(errorData.message);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to update subscription plan:", error);
+    throw error;
+  }
+}
+
+// Delete a subscription plan
+export async function deleteSubscriptionPlan(planId: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  try {
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+
+    const response = await fetch(`/api/erpnext/subscription/plan/${planId}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      let errorData: any = { message: "Failed to delete subscription plan" };
+
+      try {
+        errorData = await response.json();
+        if (errorData.message && typeof errorData.message === "object") {
+          errorData.message =
+            errorData.message.exc_message ||
+            errorData.message.message ||
+            JSON.stringify(errorData.message);
+        }
+      } catch {
+        errorData = {
+          message: errorText || "Failed to delete subscription plan",
+        };
+      }
+
+      throw new Error(errorData.message);
+    }
+
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error("Failed to delete subscription plan:", error);
+    throw error;
+  }
+}
+
 // Get subscription device by device ID
 export async function getSubscriptionDeviceByDevice(deviceId: string): Promise<{
   success: boolean;
