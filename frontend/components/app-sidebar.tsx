@@ -11,6 +11,7 @@ import {
   List,
   LayoutDashboard,
   CreditCard,
+  Shield,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,6 +96,12 @@ const navigationItems = [
     icon: CreditCard,
     id: "subscription",
     path: "/pages/subscription",
+  },
+  {
+    title: "Subscription Management",
+    icon: Shield,
+    id: "subscriptionManagement",
+    path: "/pages/subscription-management",
   },
 ];
 

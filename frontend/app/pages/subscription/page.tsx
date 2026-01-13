@@ -50,9 +50,16 @@ import {
   CheckCircle2,
   XCircle,
   Info,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   getSubscriptionPlans,
   createSubscription,
@@ -139,6 +146,7 @@ const SubscriptionPage = () => {
     useState<Subscription | null>(null);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
   const [loadingSubscription, setLoadingSubscription] = useState(false);
+  const [isEnterpriseOpen, setIsEnterpriseOpen] = useState(false);
 
   // Fetch plans on mount
   useEffect(() => {
@@ -403,6 +411,141 @@ const SubscriptionPage = () => {
     return colors[index % colors.length];
   };
 
+  // Get plan price
+  const getPlanPrice = (planName: string, billingInterval: string): string => {
+    const name = planName.toLowerCase();
+    if (name.includes("enterprise")) {
+      return "Cost Negotiated";
+    }
+    if (
+      name.includes("personal basic") ||
+      (name.includes("personal") && name.includes("basic"))
+    ) {
+      return "RM 5.00";
+    }
+    if (
+      name.includes("starter") ||
+      name.includes("sme") ||
+      name.includes("pilot")
+    ) {
+      return "RM 40.00";
+    }
+    if (name.includes("business")) {
+      return "RM 300.00";
+    }
+    return "Contact Us";
+  };
+
+  // Filter and sort plans
+  const filterAndSortPlans = (plans: SubscriptionPlan[]) => {
+    // Filter out Government plans
+    const filtered = plans.filter(
+      (plan) => !plan.plan_name.toLowerCase().includes("government")
+    );
+
+    // Separate Enterprise plans
+    const enterprisePlans = filtered.filter((plan) =>
+      plan.plan_name.toLowerCase().includes("enterprise")
+    );
+    const otherPlans = filtered.filter(
+      (plan) => !plan.plan_name.toLowerCase().includes("enterprise")
+    );
+
+    // Sort other plans: Personal Basic, Starter SME/Pilot, Business
+    const sorted = otherPlans.sort((a, b) => {
+      const aName = a.plan_name.toLowerCase();
+      const bName = b.plan_name.toLowerCase();
+
+      // Personal Basic first
+      if (
+        aName.includes("personal basic") ||
+        (aName.includes("personal") && aName.includes("basic"))
+      ) {
+        if (
+          !bName.includes("personal basic") &&
+          !(bName.includes("personal") && bName.includes("basic"))
+        ) {
+          return -1;
+        }
+      }
+      if (
+        bName.includes("personal basic") ||
+        (bName.includes("personal") && bName.includes("basic"))
+      ) {
+        if (
+          !aName.includes("personal basic") &&
+          !(aName.includes("personal") && aName.includes("basic"))
+        ) {
+          return 1;
+        }
+      }
+
+      // Starter SME/Pilot second
+      if (
+        aName.includes("starter") ||
+        aName.includes("sme") ||
+        aName.includes("pilot")
+      ) {
+        if (
+          !bName.includes("starter") &&
+          !bName.includes("sme") &&
+          !bName.includes("pilot")
+        ) {
+          if (
+            !aName.includes("personal basic") &&
+            !(aName.includes("personal") && aName.includes("basic"))
+          ) {
+            return -1;
+          }
+        }
+      }
+      if (
+        bName.includes("starter") ||
+        bName.includes("sme") ||
+        bName.includes("pilot")
+      ) {
+        if (
+          !aName.includes("starter") &&
+          !aName.includes("sme") &&
+          !aName.includes("pilot")
+        ) {
+          if (
+            !bName.includes("personal basic") &&
+            !(bName.includes("personal") && bName.includes("basic"))
+          ) {
+            return 1;
+          }
+        }
+      }
+
+      // Business third
+      if (aName.includes("business") && !bName.includes("business")) {
+        if (
+          !aName.includes("personal") &&
+          !aName.includes("starter") &&
+          !aName.includes("sme") &&
+          !aName.includes("pilot")
+        ) {
+          return -1;
+        }
+      }
+      if (bName.includes("business") && !aName.includes("business")) {
+        if (
+          !bName.includes("personal") &&
+          !bName.includes("starter") &&
+          !bName.includes("sme") &&
+          !bName.includes("pilot")
+        ) {
+          return 1;
+        }
+      }
+
+      return 0;
+    });
+
+    return { sorted, enterprisePlans };
+  };
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -535,102 +678,230 @@ const SubscriptionPage = () => {
                 </AlertDescription>
               </Alert>
             ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 mt-12">
-                {plans.map((plan, index) => {
-                  const Icon = getPlanIcon(plan.plan_name);
-                  const features = formatPlanFeatures(plan);
-                  const isPopular = index === 1; // Make second plan popular
+              <>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-12">
+                  {filterAndSortPlans(plans).sorted.map((plan, index) => {
+                    const Icon = getPlanIcon(plan.plan_name);
+                    const features = formatPlanFeatures(plan);
+                    const planNameLower = plan.plan_name.toLowerCase();
+                    const isPopular =
+                      planNameLower.includes("starter") ||
+                      planNameLower.includes("sme") ||
+                      planNameLower.includes("pilot");
+                    const price = getPlanPrice(
+                      plan.plan_name,
+                      plan.billing_interval
+                    );
 
-                  return (
-                    <Card
-                      key={plan.name}
-                      className={`relative flex flex-col transition-all hover:shadow-lg ${
-                        isPopular
-                          ? "border-2 shadow-md scale-105"
-                          : getPlanColor(index)
-                      }`}
-                    >
-                      {isPopular && (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                          <Badge className="bg-primary text-primary-foreground px-4 py-1">
-                            Popular
-                          </Badge>
-                        </div>
-                      )}
-                      <CardHeader className="text-center pb-6">
-                        <div
-                          className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${
-                            isPopular
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted"
-                          }`}
-                        >
-                          <Icon className="h-7 w-7" />
-                        </div>
-                        <CardTitle className="text-xl">
-                          {plan.plan_name}
-                        </CardTitle>
-                        <CardDescription className="mt-2 text-sm">
-                          Choose Monthly or Yearly billing
-                        </CardDescription>
-                        <div className="mt-4">
-                          <div className="flex text-center justify-center gap-2">
-                            <span className="text-lg font-semibold">
-                              Monthly
-                            </span>
-                            <span className="text-muted-foreground">/</span>
-                            <span className="text-lg font-semibold">
-                              Yearly
-                            </span>
+                    return (
+                      <Card
+                        key={plan.name}
+                        className={`relative flex flex-col transition-all hover:shadow-lg ${
+                          isPopular
+                            ? "border-2 shadow-md scale-105"
+                            : getPlanColor(index)
+                        }`}
+                      >
+                        {isPopular && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                            <Badge className="bg-primary text-primary-foreground px-4 py-1">
+                              Popular
+                            </Badge>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="flex-1 space-y-3">
-                        <div className="space-y-2.5">
-                          <div className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{features.devices}</span>
+                        )}
+                        <CardHeader className="text-center pb-6">
+                          <div
+                            className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${
+                              isPopular
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
+                          >
+                            <Icon className="h-7 w-7" />
                           </div>
-                          <div className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{features.messages}</span>
+                          <CardTitle className="text-xl">
+                            {plan.plan_name}
+                          </CardTitle>
+                          <div className="mt-4">
+                            <div className="text-3xl font-bold text-primary">
+                              {price}
+                            </div>
+                            <CardDescription className="mt-2 text-sm">
+                              {plan.billing_interval === "Monthly"
+                                ? "per month"
+                                : "per year"}
+                            </CardDescription>
                           </div>
-                          <div className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{features.data}</span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                            <span className="text-sm">{features.payment}</span>
-                          </div>
-                          {features.trial && (
+                        </CardHeader>
+                        <CardContent className="flex-1 space-y-3">
+                          <div className="space-y-2.5">
                             <div className="flex items-start gap-2">
-                              <Clock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                              <span className="text-sm font-medium text-primary">
-                                {features.trial}
+                              <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {features.devices}
                               </span>
                             </div>
+                            <div className="flex items-start gap-2">
+                              <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {features.messages}
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">{features.data}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                              <span className="text-sm">
+                                {features.payment}
+                              </span>
+                            </div>
+                            {features.trial && (
+                              <div className="flex items-start gap-2">
+                                <Clock className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                <span className="text-sm font-medium text-primary">
+                                  {features.trial}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                        <CardFooter>
+                          <Button
+                            className="w-full"
+                            variant={isPopular ? "default" : "outline"}
+                            size="lg"
+                            onClick={() => handlePlanSelect(plan)}
+                            disabled={!!currentSubscription}
+                          >
+                            {currentSubscription
+                              ? "Already Subscribed"
+                              : "Select Plan"}
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {/* Enterprise Plans - Collapsible */}
+                {filterAndSortPlans(plans).enterprisePlans.length > 0 && (
+                  <div className="mt-8">
+                    <Collapsible
+                      open={isEnterpriseOpen}
+                      onOpenChange={setIsEnterpriseOpen}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-between"
+                          size="lg"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Building2 className="h-5 w-5" />
+                            Enterprise Plans
+                          </span>
+                          {isEnterpriseOpen ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
+                          {filterAndSortPlans(plans).enterprisePlans.map(
+                            (plan, index) => {
+                              const Icon = getPlanIcon(plan.plan_name);
+                              const features = formatPlanFeatures(plan);
+                              const price = getPlanPrice(
+                                plan.plan_name,
+                                plan.billing_interval
+                              );
+
+                              return (
+                                <Card
+                                  key={plan.name}
+                                  className={`relative flex flex-col transition-all hover:shadow-lg ${getPlanColor(
+                                    index
+                                  )}`}
+                                >
+                                  <CardHeader className="text-center pb-6">
+                                    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                                      <Icon className="h-7 w-7" />
+                                    </div>
+                                    <CardTitle className="text-xl">
+                                      {plan.plan_name}
+                                    </CardTitle>
+                                    <div className="mt-4">
+                                      <div className="text-3xl font-bold text-primary">
+                                        {price}
+                                      </div>
+                                      <CardDescription className="mt-2 text-sm">
+                                        {plan.plan_name
+                                          .toLowerCase()
+                                          .includes("custom")
+                                          ? "Monthly/Yearly"
+                                          : plan.billing_interval === "Monthly"
+                                          ? "per month"
+                                          : "per year"}
+                                      </CardDescription>
+                                    </div>
+                                  </CardHeader>
+                                  <CardContent className="flex-1 space-y-3">
+                                    <div className="space-y-2.5">
+                                      <div className="flex items-start gap-2">
+                                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm">
+                                          {features.devices}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-start gap-2">
+                                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm">
+                                          {features.messages}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-start gap-2">
+                                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm">
+                                          {features.data}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-start gap-2">
+                                        <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                                        <span className="text-sm">
+                                          {features.payment}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                  <CardFooter>
+                                    <Button
+                                      className="w-full"
+                                      variant="outline"
+                                      size="lg"
+                                      onClick={() => handlePlanSelect(plan)}
+                                      disabled={!!currentSubscription}
+                                    >
+                                      {currentSubscription
+                                        ? "Already Subscribed"
+                                        : "Select Plan"}
+                                      <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Button>
+                                  </CardFooter>
+                                </Card>
+                              );
+                            }
                           )}
                         </div>
-                      </CardContent>
-                      <CardFooter>
-                        <Button
-                          className="w-full"
-                          variant={isPopular ? "default" : "outline"}
-                          size="lg"
-                          onClick={() => handlePlanSelect(plan)}
-                          disabled={!!currentSubscription}
-                        >
-                          {currentSubscription
-                            ? "Already Subscribed"
-                            : "Select Plan"}
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  );
-                })}
-              </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Info Section */}
