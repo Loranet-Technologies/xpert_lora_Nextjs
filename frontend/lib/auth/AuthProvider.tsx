@@ -156,30 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // DISABLED: Automatic session checks - users must login explicitly
-      // This ensures users always enter email/password instead of auto-redirecting
-      // Clear any existing sessions on page load to force fresh login
+      // First check ERPNext session
+      const hasERPNextSession = await checkERPNextSession();
+      if (hasERPNextSession) {
+        return;
+      }
 
-      // Clear ERPNext session data on page load
-      localStorage.removeItem("erpnext_user");
-      localStorage.removeItem("erpnext_username");
-      localStorage.removeItem("erpnext_token");
-      localStorage.removeItem("erpnext_session_active");
-      Cookies.remove("erpnext_token");
+      // Handle NextAuth session
+      if (status === "loading") {
+        setIsLoading(true);
+        return;
+      }
 
-      // Clear NextAuth session if it exists (unless from explicit login)
       if (status === "authenticated" && session) {
-        const fromLogin = sessionStorage.getItem("explicit_login") === "true";
-        if (fromLogin) {
-          // User explicitly logged in, allow authentication
-          await handleNextAuthSession(session);
-          sessionStorage.removeItem("explicit_login");
-        } else {
-          // Auto-detected session, clear it to force fresh login
-          await signOut({ redirect: false });
-          setIsLoading(false);
-          setIsAuthenticated(false);
-        }
+        await handleNextAuthSession(session);
       } else {
         setIsLoading(false);
         setIsAuthenticated(false);
@@ -445,12 +435,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       setError(null);
-      // Mark this as an explicit login (not auto-check)
-      sessionStorage.setItem("explicit_login", "true");
-      // Force login prompt - always show login page, don't use existing session
       await signIn("keycloak", {
         callbackUrl: window.location.origin + "/",
-        redirect: true,
       });
     } catch (error) {
       console.error("Login failed:", error);
@@ -458,7 +444,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         error instanceof Error ? error.message : "Keycloak login failed"
       );
       setIsLoading(false);
-      sessionStorage.removeItem("explicit_login");
     }
   };
 
