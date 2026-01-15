@@ -11,6 +11,12 @@ export const authOptions: NextAuthOptions = {
       issuer:
         process.env.KEYCLOAK_ISSUER ||
         `${KEYCLOAK_CONFIG.BASE_URL}/realms/${KEYCLOAK_CONFIG.REALM}`,
+      // Force login prompt - always show login page, don't use existing session
+      authorization: {
+        params: {
+          prompt: "login", // Forces Keycloak to show login page every time
+        },
+      },
     }),
   ],
   callbacks: {
