@@ -10,6 +10,13 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      # CRITICAL: NEXTAUTH_URL must be set for redirect URI construction
+      # Without this, NextAuth defaults to http://localhost:3000
+      - NEXTAUTH_URL=https://app.xperts.loranet.my
+      - NEXTAUTH_SECRET=loranet_xperts
+      # Keycloak Configuration
       - NEXT_PUBLIC_KEYCLOAK_URL=https://keycloak.loranet.my
       - NEXT_PUBLIC_KEYCLOAK_REALM=loranet_xperts
       - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=loranet_xperts
+      - KEYCLOAK_CLIENT_SECRET=1VqG9YHw7bPk4ySAktNVcLUa57g3KEtB
+      - KEYCLOAK_ISSUER=https://keycloak.loranet.my/realms/loranet_xperts
