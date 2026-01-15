@@ -10,7 +10,6 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - NEXT_PUBLIC_API_URL=http://localhost:5555
       - NEXT_PUBLIC_KEYCLOAK_URL=https://keycloak.loranet.my
-      - NEXT_PUBLIC_KEYCLOAK_REALM=lorawan
-      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=lorawan-frontend
+      - NEXT_PUBLIC_KEYCLOAK_REALM=loranet_xperts
+      - NEXT_PUBLIC_KEYCLOAK_CLIENT_ID=loranet_xperts
