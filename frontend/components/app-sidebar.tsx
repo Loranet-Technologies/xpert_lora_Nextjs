@@ -42,66 +42,78 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 // This is the data for the navigation items
+// Add 'requiredRole' property to restrict items to specific roles
+// If not specified, the item is visible to all users
 const navigationItems = [
   {
     title: "Dashboard",
     icon: LayoutDashboard,
     id: "dashboard",
     path: "/pages/dashboard",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Organizations",
     icon: Building2,
     id: "organizations",
     path: "/pages/organizations",
+    requiredRole: "admin", // Admin only
   },
   {
     title: "Applications",
     icon: ClipboardList,
     id: "applications",
     path: "/pages/applications",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Device Profile",
     icon: Settings,
     id: "deviceProfile",
     path: "/pages/deviceProfile",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Devices",
     icon: Smartphone,
     id: "devices",
     path: "/pages/devices",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Gateway",
     icon: Radio,
     id: "gateway",
     path: "/pages/gateway",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Gateway List",
     icon: List,
     id: "gatewayList",
     path: "/pages/gateway-list",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Device List",
     icon: List,
     id: "deviceList",
     path: "/pages/device-list",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Subscription",
     icon: CreditCard,
     id: "subscription",
     path: "/pages/subscription",
+    requiredRole: undefined, // Available to all users
   },
   {
     title: "Subscription Management",
     icon: Shield,
     id: "subscriptionManagement",
     path: "/pages/subscription-management",
+    requiredRole: "admin", // Admin only
   },
 ];
 
@@ -137,6 +149,16 @@ export function AppSidebar({
     router.push(path);
   };
 
+  // Filter navigation items based on user role
+  const filteredNavigationItems = navigationItems.filter((item) => {
+    // If no requiredRole is specified, show to all users
+    if (!item.requiredRole) {
+      return true;
+    }
+    // If requiredRole is specified, check if user has that role
+    return user?.role === item.requiredRole;
+  });
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -163,7 +185,7 @@ export function AppSidebar({
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigationItems.map((item) => (
+              {filteredNavigationItems.map((item) => (
                 <SidebarMenuItem key={item.id}>
                   <SidebarMenuButton
                     tooltip={item.title}
@@ -203,6 +225,7 @@ export function AppSidebar({
                     </span>
                     <span className="truncate text-xs">
                       {user?.email || "No email"}
+                      {user?.role && ` • ${user.role.toUpperCase()}`}
                     </span>
                   </div>
                 </SidebarMenuButton>
@@ -230,6 +253,7 @@ export function AppSidebar({
                       </span>
                       <span className="truncate text-xs">
                         {user?.email || "No email"}
+                        {user?.role && ` • ${user.role.toUpperCase()}`}
                       </span>
                     </div>
                   </div>
