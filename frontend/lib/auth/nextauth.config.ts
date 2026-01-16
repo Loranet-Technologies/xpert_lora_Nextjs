@@ -11,14 +11,6 @@ export const authOptions: NextAuthOptions = {
       issuer:
         process.env.KEYCLOAK_ISSUER ||
         `${KEYCLOAK_CONFIG.BASE_URL}/realms/${KEYCLOAK_CONFIG.REALM}`,
-      // Force Keycloak to always show the login page
-      // prompt: "login" ensures user must enter credentials (no SSO bypass)
-      authorization: {
-        params: {
-          prompt: "login", // Always show login page, don't use existing session
-          scope: "openid email profile",
-        },
-      },
     }),
   ],
   callbacks: {
