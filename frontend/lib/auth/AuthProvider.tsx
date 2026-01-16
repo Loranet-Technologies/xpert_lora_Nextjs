@@ -431,17 +431,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Keycloak login function (using NextAuth)
-  // This will redirect to Keycloak login page where user enters email/password
-  // Keycloak manages its own session independently
   const login = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      // Redirect to Keycloak login page
-      // The prompt: "login" in nextauth.config.ts ensures login page is always shown
       await signIn("keycloak", {
         callbackUrl: window.location.origin + "/",
-        redirect: true, // Ensure redirect happens
       });
     } catch (error) {
       console.error("Login failed:", error);
