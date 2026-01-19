@@ -324,16 +324,6 @@ export default function Users() {
       },
     },
     {
-      accessorKey: 'last_active',
-      header: 'Last Active',
-      cell: ({ row }: { row: { original: UserDetail; getValue: (key: string) => any } }) => {
-        const lastActive = row.getValue('last_active') as string | null;
-        return lastActive
-          ? format(new Date(lastActive), 'MMM d, yyyy, h:mm a')
-          : 'Never';
-      },
-    },
-    {
       accessorKey: 'enabled',
       header: 'Status',
       cell: ({ row }: { row: { original: UserDetail; getValue: (key: string) => any } }) => {
