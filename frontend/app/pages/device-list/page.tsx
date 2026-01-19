@@ -11,6 +11,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import Header from "@/components/header";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -174,24 +175,10 @@ export default function DeviceListPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-        </header>
+        <Header />
         <div className="flex flex-1 flex-col gap-4 p-6">
           <div className="mx-auto w-full max-w-7xl space-y-8">
-            {/* Breadcrumb */}
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink href="/">Home</BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Device List</BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-
+           
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Smartphone className="h-6 w-6" />

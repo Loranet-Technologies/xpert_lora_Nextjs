@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   CreditCard,
   Shield,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,6 +41,7 @@ import { useNavigation } from "@/components/customHooks/useNavigation";
 import { mapPathToTab } from "@/utils/mapPathToTab";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Button } from "./ui/button";
 
 // This is the data for the navigation items
 // Add 'requiredRole' property to restrict items to specific roles
@@ -115,6 +117,13 @@ const navigationItems = [
     path: "/pages/subscription-management",
     requiredRole: "admin", // Admin only
   },
+  {
+    title: "Users Management",
+    icon: Users,
+    id: "usersManagement",
+    path: "/pages/users",
+    requiredRole: undefined, // Available to all users
+  },
 ];
 
 interface AppSidebarProps {
@@ -155,8 +164,21 @@ export function AppSidebar({
     if (!item.requiredRole) {
       return true;
     }
-    // If requiredRole is specified, check if user has that role
-    return user?.role === item.requiredRole;
+    
+    const userRole = user?.role?.toLowerCase();
+    
+    // SuperAdmin has access to everything
+    if (userRole === "superadmin") {
+      return true;
+    }
+    
+    // Admin items are accessible to both admin and SuperAdmin
+    if (item.requiredRole === "admin") {
+      return userRole === "admin" || userRole === "superadmin";
+    }
+    
+    // If requiredRole is specified, check if user has that role (case-insensitive)
+    return userRole === item.requiredRole?.toLowerCase();
   });
 
   return (
@@ -202,71 +224,15 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton
-                  size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-                >
-                  <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg">
-                      {(user?.firstName || user?.username || user?.id || "U")
-                        .charAt(0)
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-semibold">
-                      {user?.firstName && user?.lastName
-                        ? `${user.firstName} ${user.lastName}`
-                        : user?.username || user?.id || "User"}
-                    </span>
-                    <span className="truncate text-xs">
-                      {user?.email || "No email"}
-                      {user?.role && ` • ${user.role.toUpperCase()}`}
-                    </span>
-                  </div>
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                className="w-[--radix-dropdown-menu-trigger-width] min-w-56 rounded-lg"
-                side="bottom"
-                align="end"
-                sideOffset={4}
-              >
-                <DropdownMenuLabel className="p-0 font-normal">
-                  <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg">
-                        {(user?.firstName || user?.username || user?.id || "U")
-                          .charAt(0)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate font-semibold">
-                        {user?.firstName && user?.lastName
-                          ? `${user.firstName} ${user.lastName}`
-                          : user?.username || user?.id || "User"}
-                      </span>
-                      <span className="truncate text-xs">
-                        {user?.email || "No email"}
-                        {user?.role && ` • ${user.role.toUpperCase()}`}
-                      </span>
-                    </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
-                  <LogOut />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
+          <Button 
+            className="w-full cursor-pointer justify-start gap-2 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-600 transition-colors" 
+            variant="ghost" 
+            size="default" 
+            onClick={() => logout()}
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Logout</span>
+          </Button>   
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
