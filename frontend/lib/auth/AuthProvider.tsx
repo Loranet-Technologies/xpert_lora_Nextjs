@@ -442,12 +442,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Extract role from login response (ERPNext returns role in message)
-      // Backend returns "admin" or "user" based on User.role field
+      // Backend returns "admin", "SuperAdmin", or "user" based on User.role field
       const loginRole =
         responseData.message?.role || responseData.role || "user";
 
-      // Normalize role to lowercase for consistency
-      const normalizedRole = loginRole.toLowerCase();
+      // Normalize role - preserve SuperAdmin, normalize others to lowercase
+      let normalizedRole = loginRole.toLowerCase();
+      if (loginRole && loginRole.toLowerCase() === "superadmin") {
+        normalizedRole = "SuperAdmin";
+      }
 
       // Extract user information
       const userInfo = {
@@ -473,6 +476,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userRoles =
         normalizedRole === "admin"
           ? ["admin", "admin_role"]
+          : normalizedRole === "SuperAdmin"
+          ? ["SuperAdmin", "superadmin", "admin", "admin_role"]
           : ["user", "user_role"];
 
       // Store and use the actual token
@@ -660,8 +665,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let newRole = "user";
 
       // Determine role (same logic as backend)
-      if (userRoleField && userRoleField.toLowerCase() === "admin") {
-        newRole = "admin";
+      if (userRoleField) {
+        const roleLower = userRoleField.toLowerCase();
+        if (roleLower === "admin") {
+          newRole = "admin";
+        } else if (roleLower === "superadmin") {
+          newRole = "SuperAdmin";
+        }
       }
 
       // Get current role from state (use functional update to get latest)
@@ -695,6 +705,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const newRoles =
             newRole === "admin"
               ? ["admin", "admin_role"]
+              : newRole === "SuperAdmin"
+              ? ["SuperAdmin", "superadmin", "admin", "admin_role"]
               : ["user", "user_role"];
 
           setRoles(newRoles);

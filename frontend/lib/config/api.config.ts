@@ -69,6 +69,10 @@ export const ERPNEXT_API_URLS = {
   // User endpoints
   GET_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_user`,
   GET_USER_DETAILS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_user_details`,
+  LIST_USERS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_users`,
+  CREATE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_user`,
+  UPDATE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_user`,
+  DELETE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_user`,
   USER_RESOURCE: `${ERPNext_BASE_URL}/api/resource/User`,
 
   // Device Events

@@ -10,5 +10,6 @@ export const mapPathToTab = (pathname: string): string => {
   if (pathname.startsWith("/pages/subscription")) return "subscription";
   if (pathname.startsWith("/pages/subscription-management"))
     return "subscriptionManagement";
+  if (pathname.startsWith("/pages/users")) return "users";
   return "dashboard"; // Default to 'dashboard' if no match is found
 };
