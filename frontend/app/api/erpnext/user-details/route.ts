@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Forward the request to ERPNext
     const response = await fetch(
-      `${ERPNext_BASE_URL}/api/resource/User/${username}`,
+      `${ERPNEXT_API_URLS.USER_RESOURCE}/${username}`,
       {
         method: "GET",
         headers,
@@ -70,13 +68,33 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
+
+    // Remove the roles array from the response if it exists
+    // Handle both nested (data.data) and flat (data) structures
+    if (data.data) {
+      // Nested structure: { data: { ...userData, roles: [...] } }
+      if (Array.isArray(data.data.roles)) {
+        const { roles, ...userDataWithoutRoles } = data.data;
+        return NextResponse.json({
+          ...data,
+          data: userDataWithoutRoles,
+        });
+      }
+    } else if (Array.isArray(data.roles)) {
+      // Flat structure: { ...userData, roles: [...] }
+      const { roles, ...userDataWithoutRoles } = data;
+      return NextResponse.json(userDataWithoutRoles);
+    }
+
     return NextResponse.json(data);
   } catch (error) {
     console.error("ERPNext user details proxy error:", error);
     return NextResponse.json(
-      { message: error instanceof Error ? error.message : "Internal server error" },
+      {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }
 }
-

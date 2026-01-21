@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 // GET - Get a single device by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -20,7 +18,8 @@ export async function GET(
       );
     }
 
-    const deviceId = params.id;
+    const { id } = await params;
+    const deviceId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -38,9 +37,7 @@ export async function GET(
 
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in the body
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_device`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.GET_DEVICE, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -89,7 +86,7 @@ export async function GET(
 // PUT - Update a device
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -103,7 +100,8 @@ export async function PUT(
       );
     }
 
-    const deviceId = params.id;
+    const { id } = await params;
+    const deviceId = id;
     const body = await request.json();
 
     // Determine token type and format headers accordingly
@@ -121,9 +119,7 @@ export async function PUT(
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_device`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.UPDATE_DEVICE, {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -173,7 +169,7 @@ export async function PUT(
 // DELETE - Delete a device
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Get token from Authorization header
@@ -187,7 +183,8 @@ export async function DELETE(
       );
     }
 
-    const deviceId = params.id;
+    const { id } = await params;
+    const deviceId = id;
 
     // Determine token type and format headers accordingly
     const headers: HeadersInit = {
@@ -205,9 +202,7 @@ export async function DELETE(
 
     // Forward the request to ERPNext
     // ERPNext API methods use POST, with parameters in the body
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_device`,
-      {
+    const response = await fetch(ERPNEXT_API_URLS.DELETE_DEVICE, {
         method: "POST",
         headers,
         body: JSON.stringify({

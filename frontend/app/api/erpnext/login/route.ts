@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,16 +14,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.login`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ usr, pwd }),
-      }
-    );
+    const response = await fetch(ERPNEXT_API_URLS.LOGIN, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ usr, pwd }),
+    });
 
     const data = await response.json();
 

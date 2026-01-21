@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
+import { ERPNEXT_API_URLS, BASE_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {
@@ -59,32 +57,32 @@ export async function GET(request: NextRequest) {
         typeof filters === "string" ? filters : JSON.stringify(filters);
     }
 
-    let response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_applications`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(requestBody),
-      }
-    );
+    const response = await fetch(ERPNEXT_API_URLS.LIST_APPLICATIONS, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+    });
 
     // If the method endpoint fails, fall back to resource endpoint with filters
     if (!response.ok) {
       console.warn(
         `list_applications method failed (${response.status}), falling back to resource endpoint`
       );
-      
+
       // Build resource endpoint URL with filters
-      let resourceUrl = `${ERPNext_BASE_URL}/api/resource/Application?fields=${encodeURIComponent(
+      let resourceUrl = `${
+        ERPNEXT_API_URLS.APPLICATION_RESOURCE
+      }?fields=${encodeURIComponent(
         fields
       )}&limit_page_length=${limit}&limit_start=${offset}`;
-      
+
       // Add filters to resource endpoint if provided
       if (filters !== null) {
-        const filtersStr = typeof filters === "string" ? filters : JSON.stringify(filters);
+        const filtersStr =
+          typeof filters === "string" ? filters : JSON.stringify(filters);
         resourceUrl += `&filters=${encodeURIComponent(filtersStr)}`;
       }
-      
+
       const fallbackResponse = await fetch(resourceUrl, {
         method: "GET",
         headers,
@@ -170,16 +168,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Forward the request to ERPNext
-    const response = await fetch(
-      `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_application`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          data: body,
-        }),
-      }
-    );
+    const response = await fetch(ERPNEXT_API_URLS.CREATE_APPLICATION, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        data: body,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
@@ -203,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
     // ERPNext API methods return { message: {...} }, unwrap it
-    let result = data.message || data;
+    const result = data.message || data;
 
     // If chirpstack_id is missing, wait a bit and fetch the application again
     // This handles cases where the sync happens asynchronously in the after_insert hook
@@ -216,16 +211,13 @@ export async function POST(request: NextRequest) {
 
       // Fetch the application again to get updated chirpstack_id
       try {
-        const getResponse = await fetch(
-          `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_application`,
-          {
-            method: "POST",
-            headers,
-            body: JSON.stringify({
-              application_id: result.name,
-            }),
-          }
-        );
+        const getResponse = await fetch(ERPNEXT_API_URLS.GET_APPLICATION, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            application_id: result.name,
+          }),
+        });
 
         if (getResponse.ok) {
           const getData = await getResponse.json();

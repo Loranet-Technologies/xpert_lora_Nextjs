@@ -9,9 +9,10 @@ import React, {
   useCallback,
 } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
-import { loginWithERPNext } from "../api/api";
+import { loginWithERPNext } from "../api/auth/auth";
 
 // Development mode - set to true to bypass Keycloak for testing
 const DEV_MODE =
@@ -48,12 +49,14 @@ interface AuthContextType {
     firstName?: string;
     lastName?: string;
     email?: string;
+    role?: string;
   } | null;
   error: string | null;
   login: () => Promise<void>;
   loginWithERPNext: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
+  refreshUserRole: () => Promise<void>;
   hasRole: (role: string) => boolean;
   hasAnyRole: (roles: string[]) => boolean;
 }
@@ -62,12 +65,10 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Auth provider component
-// ERPNext configuration
-const ERPNext_BASE_URL =
-  process.env.NEXT_PUBLIC_ERPNEXT_URL || "https://erp.xperts.loranet.my";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -78,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     firstName?: string;
     lastName?: string;
     email?: string;
+    role?: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authMethod, setAuthMethod] = useState<"erpnext" | "keycloak" | null>(
@@ -106,8 +108,85 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await response.json();
           if (userData.message) {
             const storedUser = JSON.parse(erpnextUser);
+            const username = userData.message || storedUser.username;
 
-            setUser(storedUser);
+            // Fetch latest user details to get current role
+            try {
+              const userDetailsResponse = await fetch(
+                `/api/erpnext/user-details?username=${encodeURIComponent(
+                  username
+                )}`,
+                {
+                  method: "GET",
+                  headers: {
+                    Authorization: `Bearer ${erpnextToken}`,
+                  },
+                  credentials: "include",
+                }
+              );
+
+              if (userDetailsResponse.ok) {
+                const userDetails = await userDetailsResponse.json();
+                const latestUserData = userDetails.data || {};
+
+                // Extract and normalize role from latest user data
+                const userRoleField = latestUserData.role;
+                let currentRole = "user";
+                if (userRoleField && userRoleField.toLowerCase() === "admin") {
+                  currentRole = "admin";
+                }
+
+                // Update user with latest data including role
+                const userWithRole = {
+                  ...storedUser,
+                  role: currentRole,
+                  firstName:
+                    latestUserData.first_name ||
+                    storedUser.firstName ||
+                    latestUserData.full_name?.split(" ")[0] ||
+                    "",
+                  lastName:
+                    latestUserData.last_name ||
+                    storedUser.lastName ||
+                    latestUserData.full_name?.split(" ").slice(1).join(" ") ||
+                    "",
+                  email: latestUserData.email || storedUser.email,
+                };
+
+                // Update roles array based on current role
+                const currentRoles =
+                  currentRole === "admin"
+                    ? ["admin", "admin_role"]
+                    : ["user", "user_role"];
+
+                // Update localStorage with latest data
+                localStorage.setItem(
+                  "erpnext_user",
+                  JSON.stringify(userWithRole)
+                );
+
+                setUser(userWithRole);
+                setToken(erpnextToken);
+                setRoles(currentRoles);
+                setIsAuthenticated(true);
+                setAuthMethod("erpnext");
+                setIsLoading(false);
+                return true;
+              }
+            } catch (error) {
+              console.warn(
+                "Failed to fetch latest user role, using stored data:",
+                error
+              );
+            }
+
+            // Fallback to stored user data if fetch fails
+            const userWithRole = {
+              ...storedUser,
+              role: storedUser.role || "user",
+            };
+
+            setUser(userWithRole);
             setToken(erpnextToken);
             setRoles(storedUser.roles || ["user_role"]);
             setIsAuthenticated(true);
@@ -362,6 +441,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userData = userDetails.data || userData;
       }
 
+      // Extract role from login response (ERPNext returns role in message)
+      // Backend returns "admin", "SuperAdmin", or "user" based on User.role field
+      const loginRole =
+        responseData.message?.role || responseData.role || "user";
+
+      // Normalize role - preserve SuperAdmin, normalize others to lowercase
+      let normalizedRole = loginRole.toLowerCase();
+      if (loginRole && loginRole.toLowerCase() === "superadmin") {
+        normalizedRole = "SuperAdmin";
+      }
+
       // Extract user information
       const userInfo = {
         id: userData.email || userData.name || username,
@@ -373,15 +463,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           userData.full_name?.split(" ").slice(1).join(" ") ||
           "",
         email: userData.email || username,
+        role: normalizedRole, // Store the normalized role from login response
       };
 
-      // Store user information in localStorage
+      // Store user information in localStorage (including role)
       localStorage.setItem("erpnext_user", JSON.stringify(userInfo));
       localStorage.setItem("erpnext_username", username);
       localStorage.setItem("erpnext_session_active", "true");
 
-      // Extract roles from user data if available
-      const userRoles = userData.roles || userData.user_roles || ["user_role"];
+      // Convert role to roles array format for compatibility
+      // Backend now only returns role (string), not roles (array)
+      const userRoles =
+        normalizedRole === "admin"
+          ? ["admin", "admin_role"]
+          : normalizedRole === "SuperAdmin"
+          ? ["SuperAdmin", "superadmin", "admin", "admin_role"]
+          : ["user", "user_role"];
 
       // Store and use the actual token
       setToken(token);
@@ -396,8 +493,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("ERPNext authentication successful:", {
         user: userInfo.username,
         email: userInfo.email,
+        role: userInfo.role,
         roles: userRoles,
         token: token.substring(0, 20) + "...",
+        roleSource: "ERPNext User.role field",
       });
     } catch (error) {
       console.error("ERPNext authentication handling failed:", error);
@@ -475,24 +574,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("erpnext_token");
         localStorage.removeItem("erpnext_session_active");
         Cookies.remove("erpnext_token");
+
+        // Reset state
+        setToken(null);
+        setRoles([]);
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthMethod(null);
+        setError(null);
+
+        // Redirect to login page
+        router.push("/");
       } else if (authMethod === "keycloak") {
         // NextAuth logout
         await signOut({
           callbackUrl: window.location.origin + "/",
         });
+      } else {
+        // Fallback: clear state and redirect if no auth method is set
+        setToken(null);
+        setRoles([]);
+        setUser(null);
+        setIsAuthenticated(false);
+        setAuthMethod(null);
+        setError(null);
+        router.push("/");
       }
-
-      // Reset state
-      setToken(null);
-      setRoles([]);
-      setUser(null);
-      setIsAuthenticated(false);
-      setAuthMethod(null);
-      setError(null);
     } catch (error) {
       console.error("Logout failed:", error);
+      // Even if logout fails, redirect to login page
+      router.push("/");
     }
-  }, [authMethod]);
+  }, [authMethod, router]);
 
   // Refresh token function (NextAuth handles this automatically)
   const refreshToken = useCallback(async () => {
@@ -503,6 +616,115 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [authMethod, session]);
 
+  // Refresh user role from ERPNext (real-time role update)
+  const refreshUserRole = useCallback(async () => {
+    if (authMethod !== "erpnext" || !isAuthenticated || !token) {
+      return;
+    }
+
+    try {
+      // Get username from localStorage (most reliable source)
+      const storedUserStr = localStorage.getItem("erpnext_user");
+      if (!storedUserStr) {
+        return;
+      }
+
+      const storedUser = JSON.parse(storedUserStr);
+      const username = storedUser.username || storedUser.id;
+
+      if (!username) {
+        console.warn("Cannot refresh role: username not available");
+        return;
+      }
+
+      // Fetch latest user details from ERPNext
+      const userDetailsResponse = await fetch(
+        `/api/erpnext/user-details?username=${encodeURIComponent(username)}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          credentials: "include",
+        }
+      );
+
+      if (!userDetailsResponse.ok) {
+        console.warn(
+          "Failed to refresh user role:",
+          userDetailsResponse.status
+        );
+        return;
+      }
+
+      const userDetails = await userDetailsResponse.json();
+      const userData = userDetails.data || {};
+
+      // Extract role from user data
+      const userRoleField = userData.role;
+      let newRole = "user";
+
+      // Determine role (same logic as backend)
+      if (userRoleField) {
+        const roleLower = userRoleField.toLowerCase();
+        if (roleLower === "admin") {
+          newRole = "admin";
+        } else if (roleLower === "superadmin") {
+          newRole = "SuperAdmin";
+        }
+      }
+
+      // Get current role from state (use functional update to get latest)
+      setUser((currentUser) => {
+        const currentRole = currentUser?.role || storedUser.role || "user";
+
+        // Only update if role has changed
+        if (currentRole !== newRole) {
+          console.log(`Role updated: ${currentRole} -> ${newRole}`);
+
+          // Update user object with new role and latest data
+          const updatedUser = {
+            ...(currentUser || storedUser),
+            role: newRole,
+            firstName:
+              userData.first_name ||
+              currentUser?.firstName ||
+              storedUser.firstName ||
+              userData.full_name?.split(" ")[0] ||
+              "",
+            lastName:
+              userData.last_name ||
+              currentUser?.lastName ||
+              storedUser.lastName ||
+              userData.full_name?.split(" ").slice(1).join(" ") ||
+              "",
+            email: userData.email || currentUser?.email || storedUser.email,
+          };
+
+          // Update roles array
+          const newRoles =
+            newRole === "admin"
+              ? ["admin", "admin_role"]
+              : newRole === "SuperAdmin"
+              ? ["SuperAdmin", "superadmin", "admin", "admin_role"]
+              : ["user", "user_role"];
+
+          setRoles(newRoles);
+
+          // Update localStorage
+          localStorage.setItem("erpnext_user", JSON.stringify(updatedUser));
+
+          return updatedUser;
+        }
+
+        return currentUser;
+      });
+    } catch (error) {
+      console.error("Failed to refresh user role:", error);
+      // Don't throw - this is a background update, shouldn't break the app
+    }
+  }, [authMethod, isAuthenticated, token]);
+
   // Role checking functions
   const hasRole = (role: string): boolean => {
     return roles.includes(role);
@@ -511,6 +733,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasAnyRole = (roleList: string[]): boolean => {
     return roleList.some((role) => roles.includes(role));
   };
+
+  // Set up periodic role refresh for ERPNext users
+  useEffect(() => {
+    if (authMethod !== "erpnext" || !isAuthenticated) {
+      return;
+    }
+
+    // Refresh role immediately on mount/change
+    refreshUserRole();
+
+    // Set up periodic refresh every 30 seconds
+    const intervalId = setInterval(() => {
+      refreshUserRole();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on unmount or when dependencies change
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [authMethod, isAuthenticated, refreshUserRole]);
 
   const value: AuthContextType = {
     isAuthenticated,
@@ -523,6 +765,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithERPNext: handleERPNextLogin,
     logout,
     refreshToken,
+    refreshUserRole,
     hasRole,
     hasAnyRole,
   };
