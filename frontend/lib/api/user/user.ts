@@ -56,6 +56,18 @@ export interface DeleteUserResponse {
   error?: string;
 }
 
+export interface ResetPasswordResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
 // List users with pagination and search
 export async function listUsers(params?: {
   page?: number;
@@ -349,6 +361,116 @@ export async function deleteUser(
     return data;
   } catch (error) {
     console.error('Failed to delete user:', error);
+    throw error;
+  }
+}
+
+// Reset password for another user (requires permissions)
+export async function resetUserPassword(
+  params: {
+    target_user_name: string;
+    new_password: string;
+    logout_all_sessions?: number;
+  }
+): Promise<ResetPasswordResponse> {
+  try {
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        'ERPNext authentication token not found. Please login first.'
+      );
+    }
+
+    const response = await fetch('/api/erpnext/users/password/reset', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        target_user_name: params.target_user_name,
+        new_password: params.new_password,
+        logout_all_sessions: params.logout_all_sessions || 0,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to reset password',
+      error: 'Invalid response from server',
+    }));
+
+    // Check if the response indicates an error (even if status is 200)
+    if (data.success === false) {
+      const errorMessage = data.error || data.message || 'Failed to reset password';
+      throw new Error(errorMessage);
+    }
+
+    if (!response.ok) {
+      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to reset password:', error);
+    throw error;
+  }
+}
+
+// Change password for current user
+export async function changePassword(
+  params: {
+    old_password: string;
+    new_password: string;
+    logout_all_sessions?: number;
+  }
+): Promise<ChangePasswordResponse> {
+  try {
+    const token = await getERPNextToken();
+
+    if (!token) {
+      throw new Error(
+        'ERPNext authentication token not found. Please login first.'
+      );
+    }
+
+    const response = await fetch('/api/erpnext/users/password/change', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        old_password: params.old_password,
+        new_password: params.new_password,
+        logout_all_sessions: params.logout_all_sessions || 0,
+      }),
+    });
+
+    const data = await response.json().catch(() => ({
+      success: false,
+      message: 'Failed to change password',
+      error: 'Invalid response from server',
+    }));
+
+    // Check if the response indicates an error (even if status is 200)
+    if (data.success === false) {
+      const errorMessage = data.error || data.message || 'Failed to change password';
+      throw new Error(errorMessage);
+    }
+
+    if (!response.ok) {
+      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      throw new Error(errorMessage);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Failed to change password:', error);
     throw error;
   }
 }
