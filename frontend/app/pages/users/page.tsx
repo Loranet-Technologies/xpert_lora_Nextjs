@@ -22,6 +22,8 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  Key,
+  KeyRound,
 } from 'lucide-react';
 import { useState } from 'react';
 import { format } from 'date-fns';
@@ -35,12 +37,17 @@ import Header from '@/components/header';
 import { DataTable } from '@/components/data-table';
 import { UserFormModal } from '@/components/user/user-form-modal';
 import { DeleteConfirmationModal } from '@/components/user/delete-confirmation-modal';
+import { ResetPasswordModal } from '@/components/user/reset-password-modal';
+import { ChangePasswordModal } from '@/components/user/change-password-modal';
+import { useAuth } from '@/lib/auth/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   listUsers,
   createUser,
   updateUser,
   deleteUser,
+  resetUserPassword,
+  changePassword,
   type UserDetail,
 } from '@/lib/api/user/user';
 
@@ -87,6 +94,11 @@ const getStatusBadgeColor = (status: string | null | undefined) => {
 
 export default function Users() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  
+  // Check if current user is admin or superadmin
+  const currentUserRole = user?.role?.toLowerCase() || '';
+  const canResetPassword = currentUserRole === 'admin' || currentUserRole === 'superadmin';
   
   // Pagination and search state
   const [page, setPage] = useState(1);
@@ -97,6 +109,8 @@ export default function Users() {
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
 
@@ -165,6 +179,31 @@ export default function Users() {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: resetUserPassword,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success(data.message || 'Password reset successfully');
+      setIsResetPasswordModalOpen(false);
+    },
+    onError: (error: Error) => {
+      const errorMessage = error.message || 'Failed to reset password';
+      toast.error(errorMessage, { duration: 5000 });
+    },
+  });
+
+  const changePasswordMutation = useMutation({
+    mutationFn: changePassword,
+    onSuccess: (data) => {
+      toast.success(data.message || 'Password changed successfully');
+      setIsChangePasswordModalOpen(false);
+    },
+    onError: (error: Error) => {
+      const errorMessage = error.message || 'Failed to change password';
+      toast.error(errorMessage, { duration: 5000 });
+    },
+  });
+
   const usersData = usersResponse?.data || [];
   const totalUsers = usersResponse?.total || 0;
   const totalPages = usersResponse?.total_pages || 1;
@@ -184,6 +223,31 @@ export default function Users() {
   const handleDeleteClick = (user: UserDetail) => {
     setSelectedUser(user);
     setIsDeleteModalOpen(true);
+  };
+
+  const handleResetPasswordClick = (user: UserDetail) => {
+    setSelectedUser(user);
+    setIsResetPasswordModalOpen(true);
+  };
+
+  const handleChangePasswordClick = () => {
+    setIsChangePasswordModalOpen(true);
+  };
+
+  const handleResetPasswordSubmit = (data: {
+    target_user_name: string;
+    new_password: string;
+    logout_all_sessions: number;
+  }) => {
+    resetPasswordMutation.mutate(data);
+  };
+
+  const handleChangePasswordSubmit = (data: {
+    old_password: string;
+    new_password: string;
+    logout_all_sessions: number;
+  }) => {
+    changePasswordMutation.mutate(data);
   };
 
   const handleUserSubmit = (userData: any) => {
@@ -345,15 +409,28 @@ export default function Users() {
             size="sm"
             variant="ghost"
             className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
-            onClick={() => handleEditUser(row.original)}>
+            onClick={() => handleEditUser(row.original)}
+            title="Edit user">
             <Settings className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           </Button>
+          {canResetPassword && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 hover:bg-purple-50 dark:hover:bg-purple-900/30 cursor-pointer"
+              onClick={() => handleResetPasswordClick(row.original)}
+              disabled={resetPasswordMutation.isPending}
+              title="Reset password">
+              <Key className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+            </Button>
+          )}
           <Button
             size="sm"
             variant="ghost"
             className="h-8 w-8 p-0 hover:bg-red-50 dark:hover:bg-red-900/30 cursor-pointer"
             onClick={() => handleDeleteClick(row.original)}
-            disabled={deleteUserMutation.isPending}>
+            disabled={deleteUserMutation.isPending}
+            title="Delete user">
             <Trash2 className="w-4 h-4 text-red-600 dark:text-red-400" />
           </Button>
         </div>
@@ -416,6 +493,20 @@ export default function Users() {
                       </div>
 
                       <div className="flex gap-3">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs sm:text-sm bg-transparent w-auto"
+                          onClick={handleChangePasswordClick}
+                          disabled={changePasswordMutation.isPending}>
+                          {changePasswordMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-1 sm:mr-2 animate-spin" />
+                          ) : (
+                            <KeyRound className="w-4 h-4 mr-1 sm:mr-2" />
+                          )}
+                          <span className="hidden sm:inline">Change My Password</span>
+                          <span className="sm:hidden">Password</span>
+                        </Button>
                         <Button
                           size="sm"
                           variant="outline"
@@ -527,6 +618,21 @@ export default function Users() {
           onClose={() => setIsDeleteModalOpen(false)}
           onConfirm={handleDeleteConfirm}
           user={selectedUser}
+        />
+
+        <ResetPasswordModal
+          isOpen={isResetPasswordModalOpen}
+          onClose={() => setIsResetPasswordModalOpen(false)}
+          onSubmit={handleResetPasswordSubmit}
+          user={selectedUser}
+          isLoading={resetPasswordMutation.isPending}
+        />
+
+        <ChangePasswordModal
+          isOpen={isChangePasswordModalOpen}
+          onClose={() => setIsChangePasswordModalOpen(false)}
+          onSubmit={handleChangePasswordSubmit}
+          isLoading={changePasswordMutation.isPending}
         />
       </SidebarInset>
     </SidebarProvider>

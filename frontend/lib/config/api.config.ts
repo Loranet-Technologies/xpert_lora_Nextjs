@@ -73,6 +73,8 @@ export const ERPNEXT_API_URLS = {
   CREATE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_user`,
   UPDATE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_user`,
   DELETE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_user`,
+  RESET_USER_PASSWORD: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.reset_user_password`,
+  CHANGE_PASSWORD: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.change_password`,
   USER_RESOURCE: `${ERPNext_BASE_URL}/api/resource/User`,
 
   // Device Events
