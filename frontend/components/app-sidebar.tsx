@@ -13,6 +13,7 @@ import {
   CreditCard,
   Shield,
   Users,
+  Store,
 } from "lucide-react";
 import {
   Sidebar,
@@ -122,6 +123,13 @@ const navigationItems = [
     icon: Users,
     id: "usersManagement",
     path: "/pages/users",
+    requiredRole: undefined, // Available to all users
+  },
+  {
+    title: "Merchant Management",
+    icon: Store,
+    id: "merchants",
+    path: "/pages/merchants",
     requiredRole: undefined, // Available to all users
   },
 ];
