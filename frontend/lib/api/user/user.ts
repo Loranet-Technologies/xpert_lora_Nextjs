@@ -1,5 +1,4 @@
 import { getERPNextToken } from '../utils/token';
-import { ERPNEXT_API_URLS } from '@/lib/config/api.config';
 
 export interface UserDetail {
   name: string;
@@ -104,15 +103,23 @@ export async function listUsers(params?: {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => '');
-      let errorData: any = { message: 'Failed to fetch users' };
-      
+      let errorData: { message?: string; error?: string } = {
+        message: 'Failed to fetch users',
+      };
+
       try {
-        errorData = JSON.parse(errorText);
+        const parsed = JSON.parse(errorText);
+        if (parsed && typeof parsed === 'object') {
+          errorData = parsed;
+        }
       } catch {
         errorData = { message: errorText || 'Failed to fetch users' };
       }
-      
-      const errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+
+      const errorMessage =
+        errorData.message ||
+        errorData.error ||
+        `HTTP error! status: ${response.status}`;
       console.error('Failed to fetch users:', {
         status: response.status,
         statusText: response.statusText,

@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     if (!username) {
       return NextResponse.json(
         { message: "Username is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     if (!token) {
       return NextResponse.json(
         { message: "Authorization token required" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -53,17 +53,17 @@ export async function GET(request: NextRequest) {
       {
         method: "GET",
         headers,
-      }
+      },
     );
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
       console.error(
-        `Failed to fetch user details: ${response.status} - ${errorText}`
+        `Failed to fetch user details: ${response.status} - ${errorText}`,
       );
       return NextResponse.json(
         { message: "Failed to fetch user details" },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest) {
         message:
           error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

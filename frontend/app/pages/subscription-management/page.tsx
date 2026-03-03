@@ -75,12 +75,13 @@ function SubscriptionManagement() {
   // Form state
   const [formData, setFormData] = useState({
     plan_name: "",
-    billing_interval: "Monthly" as "Monthly" | "Yearly",
+    billing_interval: "Month" as "Month" | "Year" | "Week" | "Day",
     max_devices: "",
     included_data_mb: "",
     included_messages: "",
     overage_rate_per_mb: "",
     overage_rate_per_1k_messages: "",
+    cost: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -107,12 +108,13 @@ function SubscriptionManagement() {
     setEditingPlan(null);
     setFormData({
       plan_name: "",
-      billing_interval: "Monthly",
+      billing_interval: "Month",
       max_devices: "",
       included_data_mb: "",
       included_messages: "",
       overage_rate_per_mb: "",
       overage_rate_per_1k_messages: "",
+      cost: "",
     });
     setShowDialog(true);
   };
@@ -128,6 +130,10 @@ function SubscriptionManagement() {
       overage_rate_per_mb: plan.overage_rate_per_mb.toString(),
       overage_rate_per_1k_messages:
         plan.overage_rate_per_1k_messages.toString(),
+      cost:
+        (plan.cost ?? plan.plan_price) != null
+          ? String(plan.cost ?? plan.plan_price)
+          : "",
     });
     setShowDialog(true);
   };
@@ -193,13 +199,17 @@ function SubscriptionManagement() {
 
       if (formData.overage_rate_per_mb) {
         submitData.overage_rate_per_mb = parseFloat(
-          formData.overage_rate_per_mb
+          formData.overage_rate_per_mb,
         );
       }
       if (formData.overage_rate_per_1k_messages) {
         submitData.overage_rate_per_1k_messages = parseFloat(
-          formData.overage_rate_per_1k_messages
+          formData.overage_rate_per_1k_messages,
         );
+      }
+      if (formData.cost !== "" && formData.cost != null) {
+        const price = parseFloat(formData.cost);
+        if (!isNaN(price)) submitData.cost = price;
       }
 
       if (editingPlan) {
@@ -281,6 +291,7 @@ function SubscriptionManagement() {
                         <TableRow>
                           <TableHead>Plan Name</TableHead>
                           <TableHead>Billing Interval</TableHead>
+                          <TableHead>Cost (RM)</TableHead>
                           <TableHead>Max Devices</TableHead>
                           <TableHead>Included Messages</TableHead>
                           <TableHead>Included Data (MB)</TableHead>
@@ -298,6 +309,12 @@ function SubscriptionManagement() {
                               <Badge variant="outline">
                                 {plan.billing_interval}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {(plan.cost ?? plan.plan_price) != null &&
+                              (plan.cost ?? plan.plan_price)! > 0
+                                ? `RM ${Number(plan.cost ?? plan.plan_price).toFixed(2)}`
+                                : "—"}
                             </TableCell>
                             <TableCell>{plan.max_devices}</TableCell>
                             <TableCell>
@@ -394,7 +411,11 @@ function SubscriptionManagement() {
                   onValueChange={(value) =>
                     setFormData({
                       ...formData,
-                      billing_interval: value as "Monthly" | "Yearly",
+                      billing_interval: value as
+                        | "Month"
+                        | "Year"
+                        | "Week"
+                        | "Day",
                     })
                   }
                 >
@@ -402,10 +423,27 @@ function SubscriptionManagement() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Monthly">Monthly</SelectItem>
-                    <SelectItem value="Yearly">Yearly</SelectItem>
+                    <SelectItem value="Day">Day</SelectItem>
+                    <SelectItem value="Week">Week</SelectItem>
+                    <SelectItem value="Month">Month</SelectItem>
+                    <SelectItem value="Year">Year</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cost">Cost (RM)</Label>
+                <Input
+                  id="cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.cost}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cost: e.target.value })
+                  }
+                  placeholder="e.g., 29.00"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
