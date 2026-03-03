@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -151,7 +151,7 @@ const organizationTypes = [
   },
 ];
 
-const SubscriptionPage = () => {
+const SubscriptionPageInner = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1867,6 +1867,37 @@ const SubscriptionPage = () => {
         />
       </SidebarInset>
     </SidebarProvider>
+  );
+};
+
+const SubscriptionPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <SidebarProvider>
+          <AppSidebar />
+          <SidebarInset>
+            <Header />
+            <div className="flex flex-1 flex-col gap-4 p-6 animate-in fade-in-0 duration-200">
+              <div className="mx-auto w-full max-w-7xl space-y-12">
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-48 mx-auto md:mx-0" />
+                  <Skeleton className="h-5 w-full max-w-2xl mx-auto md:mx-0" />
+                  <Skeleton className="h-5 w-full max-w-xl mx-auto md:mx-0" />
+                </div>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-8">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-[320px] rounded-xl" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      }
+    >
+      <SubscriptionPageInner />
+    </Suspense>
   );
 };
 
