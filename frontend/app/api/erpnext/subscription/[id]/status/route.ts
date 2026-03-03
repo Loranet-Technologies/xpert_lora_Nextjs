@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
-// PATCH - Update subscription status
+/**
+ * PATCH - Update subscription status (Cancel, Suspend, or set Active).
+ * Proxies to ERPNext: xpert_lora_app.api.update_subscription_status
+ * Args: subscription_id, status ("Active" | "Trialling" | "Cancelled").
+ * Backend: on_subscription_update (DocEvent) ensures related Payment Request and
+ * Payment Transaction Log are set to Cancelled whenever a Subscription is cancelled from any path.
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -49,13 +55,15 @@ export async function PATCH(
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(
-      `${ERPNEXT_API_URLS.UPDATE_SUBSCRIPTION_STATUS}?subscription_id=${subscriptionId}&status=${status}`,
-      {
-        method: "PATCH",
-        headers,
-      }
-    );
+    // Frappe /api/method/ only accepts GET or POST; backend expects subscription_id + status in body or query
+    const response = await fetch(ERPNEXT_API_URLS.UPDATE_SUBSCRIPTION_STATUS, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        subscription_id: subscriptionId,
+        status,
+      }),
+    });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");

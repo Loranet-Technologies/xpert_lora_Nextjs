@@ -37,6 +37,8 @@ export const ERPNEXT_API_URLS = {
   CREATE_DEVICE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_device`,
   UPDATE_DEVICE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_device`,
   DELETE_DEVICE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_device`,
+  /** Device limit from subscription (current_count, device_limit, has_active_subscription). */
+  GET_DEVICE_LIMIT_INFO: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_device_limit_info`,
   DEVICE_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Device`,
 
   // Device Profile endpoints
@@ -93,15 +95,39 @@ export const ERPNEXT_API_URLS = {
   CREATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_subscription`,
   GET_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription`,
   GET_ORGANIZATION_SUBSCRIPTIONS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_organization_subscriptions`,
-  ATTACH_DEVICE_TO_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.attach_device_to_subscription`,
-  REMOVE_DEVICE_FROM_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.remove_device_from_subscription`,
-  GET_SUBSCRIPTION_DEVICES: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription_devices`,
+  /** Get all organizations for current user (one call). */
+  GET_ORGANIZATIONS_BY_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_organizations_by_user`,
+  /** Get all subscriptions for multiple organizations (one call). POST body: { organizations: string[] }. */
+  GET_SUBSCRIPTIONS_BY_ORGANIZATIONS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscriptions_by_organizations`,
+  /** Subscription page: one call returns has_subscription, organizations (with subscriptions), plans. */
+  GET_SUBSCRIPTION_PAGE_DATA: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription_page_data`,
+  /** Billing history (Payment Requests) for org or subscription. */
+  GET_BILLING_HISTORY: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_billing_history`,
   UPDATE_SUBSCRIPTION_STATUS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_subscription_status`,
   VALIDATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.validate_subscription`,
-  SUBSCRIPTION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscriptions`,
-  SUBSCRIPTION_DEVICE_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription Device`,
-  SUBSCRIPTION_PLAN_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscriptions Plan`,
+  SUBSCRIPTION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription`,
+  SUBSCRIPTION_PLAN_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription Plan`,
   ORGANIZATION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Organization`,
+
+  // Stripe Payment (Payment Request → Payment Intent for frontend)
+  // ERPNext: create_stripe_payment_intent(payment_request_name) [allow_guest] → calls create_payment_intent_for_request
+  CREATE_STRIPE_PAYMENT_INTENT: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_stripe_payment_intent`,
+
+  // Get or create Payment Request for a subscription (so user can pay with Stripe)
+  GET_PAYMENT_REQUEST_FOR_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_payment_request_for_subscription`,
+
+  // Pay-first: create Payment Intent for plan (no subscription yet); webhook creates subscription on success
+  CREATE_PAYMENT_INTENT_FOR_PLAN: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.create_payment_intent_for_plan`,
+  // Pay-first: get status for payment request (status, subscription_name, can_pay_again, can_cancel)
+  GET_PAYMENT_STATUS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_payment_status`,
+
+  // Payment Request resource (for status check after Stripe webhook)
+  PAYMENT_REQUEST_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Payment Request`,
+
+  // Merchant & Payment Gateway (Xpert Lora App)
+  MERCHANT_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Merchant`,
+  MERCHANT_GATEWAY_ACCOUNT_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Merchant Gateway Account`,
+  PAYMENT_TRANSACTION_LOG_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Payment Transaction Log`,
 };
 
 // Keycloak API URLs
@@ -161,6 +187,12 @@ export const getErpNextUrl = {
   GATEWAY_BY_ID: (id: string) =>
     `${ERPNext_BASE_URL}/api/resource/Gateway/${id}`,
   TENANT_BY_ID: (id: string) => `${ERPNext_BASE_URL}/api/resource/Tenant/${id}`,
+  MERCHANT_BY_ID: (id: string) =>
+    `${ERPNext_BASE_URL}/api/resource/Merchant/${encodeURIComponent(id)}`,
+  MERCHANT_GATEWAY_ACCOUNT_BY_ID: (id: string) =>
+    `${ERPNext_BASE_URL}/api/resource/Merchant Gateway Account/${encodeURIComponent(id)}`,
+  PAYMENT_REQUEST_BY_ID: (id: string) =>
+    `${ERPNext_BASE_URL}/api/resource/Payment Request/${encodeURIComponent(id)}`,
 };
 
 export const getApiUrl = {

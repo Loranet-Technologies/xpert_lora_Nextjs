@@ -33,12 +33,13 @@ export async function GET(request: NextRequest) {
     const fields =
       searchParams.get("fields") || '["name", "organization_name"]';
 
-    // Query ERPNext resource API
+    // Query ERPNext resource API (order by modified desc so recent orgs first - e.g. the one used to buy subscription)
+    const orderBy = searchParams.get("order_by") || "modified desc";
     const resourceUrl = `${
       ERPNEXT_API_URLS.ORGANIZATION_RESOURCE
     }?fields=${encodeURIComponent(
       fields
-    )}&limit_page_length=${limit}&limit_start=${offset}`;
+    )}&limit_page_length=${limit}&limit_start=${offset}&order_by=${encodeURIComponent(orderBy)}`;
 
     const response = await fetch(resourceUrl, {
       method: "GET",

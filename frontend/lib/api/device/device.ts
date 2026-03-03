@@ -12,7 +12,7 @@ export async function listERPNextDevices(params?: {
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
@@ -42,7 +42,7 @@ export async function listERPNextDevices(params?: {
           Authorization: `Bearer ${token}`,
         },
         credentials: "include",
-      }
+      },
     );
 
     if (!response.ok) {
@@ -50,7 +50,7 @@ export async function listERPNextDevices(params?: {
         message: "Failed to list devices",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -82,13 +82,13 @@ export async function fetchERPNextDevices(params?: {
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
     // Build query parameters
     let queryParams = `fields=${encodeURIComponent(
-      fieldsParam
+      fieldsParam,
     )}&limit=${limit}&offset=${offset}`;
     if (params?.application) {
       // Filter by application if provided
@@ -115,7 +115,7 @@ export async function fetchERPNextDevices(params?: {
         message: "Failed to fetch devices",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -135,7 +135,7 @@ export async function getERPNextDevice(deviceId: string) {
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
@@ -153,7 +153,7 @@ export async function getERPNextDevice(deviceId: string) {
         message: "Failed to fetch device",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -165,12 +165,58 @@ export async function getERPNextDevice(deviceId: string) {
   }
 }
 
+/** Device limit info for a customer (from active subscription). */
+export type DeviceLimitInfo = {
+  current_count: number;
+  device_limit: number | null;
+  has_active_subscription: boolean;
+};
+
+/** Get device limit info. When customer is omitted, uses current user's derived customer. */
+export async function getERPNextDeviceLimitInfo(
+  customer?: string
+): Promise<DeviceLimitInfo> {
+  try {
+    const token = await getERPNextToken();
+    if (!token) {
+      throw new Error(
+        "ERPNext authentication token not found. Please login first."
+      );
+    }
+    const url = customer?.trim()
+      ? `/api/erpnext/device/limit-info?customer=${encodeURIComponent(customer.trim())}`
+      : "/api/erpnext/device/limit-info";
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      credentials: "include",
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: "Failed to get device limit" }));
+      throw new Error(err.message || "Failed to get device limit info");
+    }
+    const data = await response.json();
+    return {
+      current_count: data.current_count ?? 0,
+      device_limit: data.device_limit ?? null,
+      has_active_subscription: data.has_active_subscription ?? false,
+    };
+  } catch (error) {
+    console.error("Failed to get device limit info:", error);
+    throw error;
+  }
+}
+
 // ERPNext Device API - Create a new device
 export async function createERPNextDevice(data: {
   device_name: string;
   dev_eui: string;
   application: string;
   device_profile: string;
+  customer?: string;
   status?: string;
   description?: string;
   metadata?: any;
@@ -181,7 +227,7 @@ export async function createERPNextDevice(data: {
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
@@ -235,6 +281,7 @@ export async function updateERPNextDevice(
     dev_eui?: string;
     application?: string;
     device_profile?: string;
+    customer?: string;
     status?: string;
     description?: string;
     metadata?: any;
@@ -246,7 +293,7 @@ export async function updateERPNextDevice(
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
@@ -265,7 +312,7 @@ export async function updateERPNextDevice(
         message: "Failed to update device",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -285,7 +332,7 @@ export async function deleteERPNextDevice(deviceId: string) {
 
     if (!token) {
       throw new Error(
-        "ERPNext authentication token not found. Please login first."
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
@@ -303,7 +350,7 @@ export async function deleteERPNextDevice(deviceId: string) {
         message: "Failed to delete device",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
@@ -314,4 +361,3 @@ export async function deleteERPNextDevice(deviceId: string) {
     throw error;
   }
 }
-

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ERPNEXT_API_URLS, BASE_URLS } from "@/lib/config/api.config";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 export async function GET(request: NextRequest) {
   try {

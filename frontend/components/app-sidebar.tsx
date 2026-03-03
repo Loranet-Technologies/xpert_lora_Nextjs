@@ -29,15 +29,6 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useNavigation } from "@/components/customHooks/useNavigation";
 import { mapPathToTab } from "@/utils/mapPathToTab";
 import { usePathname, useRouter } from "next/navigation";
@@ -172,19 +163,19 @@ export function AppSidebar({
     if (!item.requiredRole) {
       return true;
     }
-    
+
     const userRole = user?.role?.toLowerCase();
-    
-    // SuperAdmin has access to everything
+
+    // SuperAdmin has access to everything (role is compared lowercase)
     if (userRole === "superadmin") {
       return true;
     }
-    
+
     // Admin items are accessible to both admin and SuperAdmin
-    if (item.requiredRole === "admin") {
+    if (item.requiredRole?.toLowerCase() === "admin") {
       return userRole === "admin" || userRole === "superadmin";
     }
-    
+
     // If requiredRole is specified, check if user has that role (case-insensitive)
     return userRole === item.requiredRole?.toLowerCase();
   });
@@ -232,15 +223,15 @@ export function AppSidebar({
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
-          <Button 
-            className="w-full cursor-pointer justify-start gap-2 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-600 transition-colors" 
-            variant="ghost" 
-            size="default" 
-            onClick={() => logout()}
-          >
-            <LogOut className="h-4 w-4" />
-            <span>Logout</span>
-          </Button>   
+        <Button
+          className="w-full cursor-pointer justify-start gap-2 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-600 transition-colors"
+          variant="ghost"
+          size="default"
+          onClick={() => logout()}
+        >
+          <LogOut className="h-4 w-4" />
+          <span>Logout</span>
+        </Button>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
