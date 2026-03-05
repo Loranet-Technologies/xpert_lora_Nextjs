@@ -1,29 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "../lib/auth/AuthProvider";
-import LoginPage from "../components/LoginPage";
+import LandingPage from "../components/LandingPage";
 import DashboardPage from "./pages/dashboard/page";
 
 export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
-  // Show loading spinner while checking authentication
+  const router = useRouter();
+
+  // Redirect to stored URL after login (e.g. from Subscribe on landing)
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      const redirect = sessionStorage.getItem("post_login_redirect");
+      if (redirect) {
+        sessionStorage.removeItem("post_login_redirect");
+        router.push(redirect);
+        return;
+      }
+    }
+  }, [isAuthenticated, isLoading, router]);
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+          <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Show login page if not authenticated
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return <LandingPage />;
   }
 
-  // Redirect to dashboard by default
   return <DashboardPage />;
 }

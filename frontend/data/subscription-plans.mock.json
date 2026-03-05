@@ -1,0 +1,78 @@
+{
+  "plans": [
+    {
+      "id": 1,
+      "plan_name": "Personal Basic",
+      "price": 5.0,
+      "priceLabel": "RM 5.00",
+      "interval": "Monthly",
+      "billingIntervalCost": 1,
+      "popular": false,
+      "trialDays": 7,
+      "features": [
+        { "text": "Max 1 Devices", "included": true },
+        { "text": "Included 1000 Uplink/Device per Month", "included": true },
+        { "text": "Included 10 MB", "included": true },
+        { "text": "Prepaid Only", "included": true }
+      ]
+    },
+    {
+      "id": 2,
+      "plan_name": "Starter SME/Pilot",
+      "price": 40.0,
+      "priceLabel": "RM 40.00",
+      "interval": "Monthly",
+      "popular": true,
+      "features": [
+        { "text": "Max 10 Devices", "included": true },
+        { "text": "Included 10,000 Uplink/Device per Month", "included": true },
+        { "text": "Included 100 MB", "included": true },
+        { "text": "Prepaid Only", "included": true }
+      ]
+    },
+    {
+      "id": 3,
+      "plan_name": "Business",
+      "price": 300.0,
+      "priceLabel": "RM 300.00",
+      "interval": "Monthly",
+      "popular": false,
+      "features": [
+        { "text": " Max 100 Devices", "included": true },
+        {
+          "text": "Included 200,000 Uplink/Device per Month",
+          "included": true
+        },
+        { "text": "Prepaid Only", "included": true }
+      ]
+    },
+    {
+      "id": 5,
+      "plan_name": "Enterprise",
+      "price": "cost negotiated",
+      "priceLabel": "Cost Negotiated ",
+      "interval": " Monthly/Yearly",
+      "popular": false,
+      "allowDeferredBilling": true,
+      "features": [
+        { "text": "Custom devices ", "included": true },
+        { "text": "Custom data usage", "included": true },
+        { "text": "SLA enabled", "included": true }
+      ]
+    },
+    {
+      "id": 4,
+      "plan_name": "Government Project Plan",
+      "price": "cost negotiated",
+      "priceLabel": "Cost Negotiated",
+      "interval": "Monthly",
+      "popular": false,
+      "allowDeferredBilling": true,
+      "features": [
+        { "text": "Custom devices ", "included": true },
+        { "text": "Custom data usage", "included": true },
+        { "text": "SLA enabled", "included": true }
+      ]
+    }
+  ]
+}
