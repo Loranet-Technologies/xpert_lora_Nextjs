@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAuth } from "../lib/auth/AuthProvider";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -46,7 +47,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+      <div className="absolute top-4 left-4 z-10">
+        <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          ← Back to plans
+        </Link>
+      </div>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">

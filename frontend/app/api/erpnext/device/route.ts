@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
+import { parseErpNextError } from "@/lib/api/utils/parseErpNextError";
 
 export async function GET(request: NextRequest) {
   try {
@@ -179,30 +180,14 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      let errorData: any = { message: "Failed to create device" };
-
-      try {
-        errorData = JSON.parse(errorText);
-        // ERPNext error responses are wrapped in { message: { exc_type, exc_message, ... } }
-        if (errorData.message && typeof errorData.message === "object") {
-          errorData.message =
-            errorData.message.exc_message ||
-            errorData.message.message ||
-            JSON.stringify(errorData.message);
-        }
-      } catch {
-        errorData = { message: errorText || "Failed to create device" };
-      }
-
-      const errorMessage =
-        errorData.message ||
-        errorData.exc_message ||
-        `HTTP ${response.status}: ${errorText}`;
-
-      console.error(
-        `Failed to create device: ${response.status} - ${errorMessage}`,
-        { errorText, errorData }
+      const errorMessage = parseErpNextError(
+        errorText,
+        "Failed to create device"
       );
+
+      console.error(`Failed to create device: ${response.status}`, {
+        message: errorMessage,
+      });
 
       return NextResponse.json(
         { message: errorMessage },

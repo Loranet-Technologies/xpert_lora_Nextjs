@@ -136,6 +136,8 @@ export const KEYCLOAK_API_URLS = {
   AUTHORIZE: `${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/auth`,
   LOGOUT: `${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/logout`,
   USER_INFO: `${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/userinfo`,
+  /** Registration page (requires "User registration" enabled in Keycloak realm) */
+  REGISTRATION: `${KEYCLOAK_BASE_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/registrations`,
 };
 
 // Keycloak Configuration (for client ID, secret, etc.)

@@ -94,6 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const userDetailsFetchInProgressRef = useRef(false);
 
+  // Cache /api/erpnext/user verification per token - call once per page load, reuse until logout
+  const erpnextUserVerifiedRef = useRef<{
+    token: string;
+    userData: { username: string; userWithRole: any };
+  } | null>(null);
+
+  // Prevent re-running init when we've already completed (avoids repeated effect runs)
+  const initCompletedRef = useRef(false);
+
   // Single centralized fetcher: returns cached data if we already have it for this user; otherwise fetches once
   const fetchUserDetailsCached = useCallback(
     async (
@@ -138,6 +147,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const sessionActive = localStorage.getItem("erpnext_session_active");
 
       if (sessionActive === "true" && erpnextUser && erpnextToken) {
+        // Use cached verification if we already verified this token this page load
+        const cached = erpnextUserVerifiedRef.current;
+        if (cached && cached.token === erpnextToken) {
+          const storedUser = JSON.parse(erpnextUser);
+          const userWithRole = cached.userData.userWithRole || {
+            ...storedUser,
+            role: storedUser.role || "user",
+          };
+          const currentRoles =
+            userWithRole.role === "SuperAdmin"
+              ? ["SuperAdmin", "superadmin", "admin", "admin_role"]
+              : userWithRole.role === "admin"
+              ? ["admin", "admin_role"]
+              : ["user", "user_role"];
+          setUser(userWithRole);
+          setToken(erpnextToken);
+          setRoles(currentRoles);
+          setIsAuthenticated(true);
+          setAuthMethod("erpnext");
+          setIsLoading(false);
+          return true;
+        }
+
         // Verify session is still valid by checking user info via proxy using token
         const response = await fetch("/api/erpnext/user", {
           method: "GET",
@@ -211,6 +243,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                   JSON.stringify(userWithRole)
                 );
 
+                // Cache verification so we don't call /api/erpnext/user again this page load
+                erpnextUserVerifiedRef.current = {
+                  token: erpnextToken,
+                  userData: { username, userWithRole },
+                };
+
                 setUser(userWithRole);
                 setToken(erpnextToken);
                 setRoles(currentRoles);
@@ -232,6 +270,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               role: storedUser.role || "user",
             };
 
+            // Cache verification so we don't call /api/erpnext/user again this page load
+            erpnextUserVerifiedRef.current = {
+              token: erpnextToken,
+              userData: { username, userWithRole },
+            };
+
             setUser(userWithRole);
             setToken(erpnextToken);
             setRoles(storedUser.roles || ["user_role"]);
@@ -241,23 +285,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return true;
           }
         } else {
-          // Session expired, clear stored data
+          // Session expired, clear stored data and caches
           localStorage.removeItem("erpnext_user");
           localStorage.removeItem("erpnext_username");
           localStorage.removeItem("erpnext_token");
           localStorage.removeItem("erpnext_session_active");
           Cookies.remove("erpnext_token");
+          erpnextUserVerifiedRef.current = null;
         }
       }
       return false;
     } catch (error) {
       console.error("ERPNext session check failed:", error);
-      // Clear potentially invalid session data
+      // Clear potentially invalid session data and caches
       localStorage.removeItem("erpnext_user");
       localStorage.removeItem("erpnext_username");
       localStorage.removeItem("erpnext_token");
       localStorage.removeItem("erpnext_session_active");
       Cookies.remove("erpnext_token");
+      erpnextUserVerifiedRef.current = null;
       return false;
     }
   }, [fetchUserDetailsCached]);
@@ -269,8 +315,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       null
     : null;
 
-  // Authenticate with ERPNext using Keycloak token
-  const authenticateERPNextWithKeycloak = async (keycloakToken: string) => {
+  // Authenticate with ERPNext using Keycloak token (stable ref)
+  const authenticateERPNextWithKeycloak = useCallback(
+    async (keycloakToken: string) => {
     try {
       const response = await fetch("/api/erpnext/login-with-keycloak", {
         method: "POST",
@@ -318,7 +365,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "ℹ️ ERPNext auth hook should still validate Keycloak tokens for API calls"
       );
     }
-  };
+    },
+    []
+  );
 
   // Handle NextAuth session (Keycloak)
   const handleNextAuthSession = useCallback(
@@ -389,6 +438,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
+      if (initCompletedRef.current) {
+        return;
+      }
+
       // Development mode - bypass authentication
       if (DEV_MODE) {
         console.log("🔧 Development mode: Bypassing authentication");
@@ -403,12 +456,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setIsAuthenticated(true);
         setIsLoading(false);
+        initCompletedRef.current = true;
         return;
       }
 
       // First check ERPNext session
       const hasERPNextSession = await checkERPNextSession();
       if (hasERPNextSession) {
+        initCompletedRef.current = true;
         return;
       }
 
@@ -420,9 +475,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (status === "authenticated" && session) {
         await handleNextAuthSession(session);
+        initCompletedRef.current = true;
       } else {
         setIsLoading(false);
         setIsAuthenticated(false);
+        initCompletedRef.current = true;
       }
     };
     initAuth();
@@ -605,13 +662,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        // Clear ERPNext stored data and user-details cache
+        // Clear ERPNext stored data and caches
         localStorage.removeItem("erpnext_user");
         localStorage.removeItem("erpnext_username");
         localStorage.removeItem("erpnext_token");
         localStorage.removeItem("erpnext_session_active");
         Cookies.remove("erpnext_token");
         userDetailsCacheRef.current = null;
+        erpnextUserVerifiedRef.current = null;
+        initCompletedRef.current = false;
 
         // Reset state
         setToken(null);
@@ -624,11 +683,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Redirect to login page
         router.push("/");
       } else if (authMethod === "keycloak") {
+        initCompletedRef.current = false;
         // NextAuth logout
         await signOut({
           callbackUrl: window.location.origin + "/",
         });
       } else {
+        initCompletedRef.current = false;
         // Fallback: clear state and redirect if no auth method is set
         setToken(null);
         setRoles([]);

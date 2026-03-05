@@ -65,7 +65,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Edit, Trash2, Smartphone, Loader2 } from "lucide-react";
@@ -325,12 +329,16 @@ export default function DevicesAdminPage() {
     } catch (e: any) {
       console.error("Device creation error:", e);
 
-      // Handle specific error messages
+      // Handle specific error messages with user-friendly text
       let errorMessage = "Failed to create device";
       if (e?.message?.includes("already exists")) {
         errorMessage = `Device with DevEUI "${form.devEui}" already exists. Please use a different DevEUI.`;
-      } else if (e?.message?.includes("No active subscription")) {
-        errorMessage = e.message;
+      } else if (
+        e?.message?.includes("active subscription") ||
+        e?.message?.includes("subscription")
+      ) {
+        errorMessage =
+          "You need an active subscription to create a device. Please subscribe first.";
       } else if (e?.message?.includes("Device limit reached")) {
         errorMessage = e.message;
       } else if (e?.message?.includes("Device profile")) {
@@ -590,6 +598,7 @@ export default function DevicesAdminPage() {
 
             {error && (
               <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
