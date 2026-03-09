@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { streamGatewayFrames } from "@/lib/api/streams/streams";
 import { getERPNextGateway } from "@/lib/api/gateway/gateway";
 import {
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import Header from "@/components/header";
@@ -28,14 +27,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 
 // Gateway Frame type
 type GatewayFrame = {
@@ -68,7 +59,6 @@ type Gateway = {
 
 export default function GatewayFrames() {
   const params = useParams();
-  const router = useRouter();
   const gatewayId = params?.id as string;
 
   // Frame streaming state
