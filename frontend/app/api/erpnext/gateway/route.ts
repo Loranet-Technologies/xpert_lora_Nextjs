@@ -53,9 +53,10 @@ export async function GET(request: NextRequest) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    // Use list_gateways API method if filters, limit, or offset are provided
-    // Otherwise, fall back to resource API
-    if (filters !== null || limit !== 20 || offset !== 0) {
+    // Use list_gateways API method for paginated list (always when limit/offset in query)
+    // to ensure consistent { data, total } response. Otherwise fall back to resource API.
+    const hasPagination = searchParams.has("limit") || searchParams.has("offset");
+    if (hasPagination || filters !== null) {
       // Use list_gateways API method
       const body: any = {
         limit,

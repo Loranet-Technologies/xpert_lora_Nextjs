@@ -75,17 +75,10 @@ const navigationItems = [
     requiredRole: undefined, // Available to all users
   },
   {
-    title: "Gateway",
+    title: "Gateways",
     icon: Radio,
-    id: "gateway",
-    path: "/pages/gateway",
-    requiredRole: undefined, // Available to all users
-  },
-  {
-    title: "Gateway List",
-    icon: List,
-    id: "gatewayList",
-    path: "/pages/gateway-list",
+    id: "gateways",
+    path: "/pages/gateways",
     requiredRole: undefined, // Available to all users
   },
   {
