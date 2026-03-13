@@ -94,7 +94,7 @@ const getStatusBadgeColor = (status: string | null | undefined) => {
 
 export default function Users() {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   // Check if current user is admin or superadmin
   const currentUserRole = user?.role?.toLowerCase() || '';
@@ -151,12 +151,36 @@ export default function Users() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: ({ userName, userData }: { userName: string; userData: any }) =>
-      updateUser(userName, userData),
-    onSuccess: (data) => {
+    mutationFn: ({
+      userName,
+      userData,
+    }: {
+      userName: string;
+      userData: any;
+      previousEmail?: string;
+    }) => updateUser(userName, userData),
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       toast.success(data.message || 'User updated successfully');
       setIsUserModalOpen(false);
+
+      // If the currently logged-in user changed their own email, force logout
+      const previousEmail = variables?.previousEmail;
+      const newEmail = variables?.userData?.email;
+      const currentUserEmail = user?.email;
+
+      if (
+        previousEmail &&
+        newEmail &&
+        currentUserEmail &&
+        previousEmail.toLowerCase() === currentUserEmail.toLowerCase() &&
+        newEmail.toLowerCase() !== previousEmail.toLowerCase()
+      ) {
+        toast.info(
+          'Your email was changed. You will be logged out and need to log in again with your new email.'
+        );
+        logout();
+      }
     },
     onError: (error: Error) => {
       // Extract clear error message
@@ -296,6 +320,7 @@ export default function Users() {
           role: userData.role, // Already in correct format (SuperAdmin, Admin, User)
           enabled: userData.enabled,
         },
+        previousEmail: selectedUser.email,
       });
     }
   };
