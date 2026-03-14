@@ -103,6 +103,8 @@ export const ERPNEXT_API_URLS = {
   GET_SUBSCRIPTION_PAGE_DATA: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_subscription_page_data`,
   /** Billing history (Payment Requests) for org or subscription. */
   GET_BILLING_HISTORY: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_billing_history`,
+  /** Subscription dashboard: all KPIs, revenue, metrics, customers, billing, plans, churn, alerts (one call). */
+  GET_SUBSCRIPTION_DASHBOARD_ALL: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.subscription_dashboard.get_subscription_dashboard_all`,
   UPDATE_SUBSCRIPTION_STATUS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_subscription_status`,
   VALIDATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.validate_subscription`,
   SUBSCRIPTION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription`,

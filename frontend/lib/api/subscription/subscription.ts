@@ -927,3 +927,234 @@ export async function deleteSubscriptionPlan(planId: string): Promise<{
     throw error;
   }
 }
+
+// ---------------------------------------------------------------------------
+// Subscription Service Dashboard (xpert_lora_app.subscription_dashboard)
+// ---------------------------------------------------------------------------
+
+export interface SubscriptionDashboardKPIs {
+  monthly_revenue: number;
+  mrr: number;
+  active_subscriptions: number;
+  new_subscriptions_this_month: number;
+  churn_rate: number;
+  trial_users: number;
+  trial_conversion_rate: number;
+}
+
+export interface SubscriptionDashboardRevenueAnalytics {
+  revenue_by_month: Array<{ month: string; revenue: number }>;
+  mrr_by_month: Array<{ month: string; mrr: number }>;
+  revenue_by_plan: Array<{ plan: string; revenue: number }>;
+}
+
+export interface SubscriptionDashboardMetrics {
+  active_subscriptions: number;
+  new_subscriptions_30d: number;
+  cancelled_subscriptions_30d: number;
+  expiring_soon: number;
+  trial_conversion_rate: number;
+}
+
+export interface SubscriptionDashboardCustomerInsights {
+  total_customers: number;
+  new_customers_7d: number;
+  customers_by_plan: Array<{ plan: string; count: number }>;
+  top_customers: Array<{
+    customer_name: string;
+    customer: string;
+    plan: string;
+    monthly_spend: number;
+  }>;
+}
+
+export interface SubscriptionDashboardPaymentBilling {
+  successful_payments_count: number;
+  successful_payments_sample: Array<{
+    name: string;
+    grand_total?: number;
+    creation?: string;
+    party?: string;
+  }>;
+  failed_payments_count: number;
+  failed_payments_list: Array<{
+    name: string;
+    grand_total?: number;
+    creation?: string;
+    party?: string;
+    status?: string;
+  }>;
+  outstanding_invoices_count: number;
+  outstanding_invoices: Array<{
+    name: string;
+    customer?: string;
+    posting_date?: string;
+    outstanding_amount?: number;
+    grand_total?: number;
+    currency?: string;
+  }>;
+  refunds_issued_count: number;
+}
+
+export interface SubscriptionDashboardPlanPerformance {
+  plan: string;
+  subscribers: number;
+  revenue: number;
+}
+
+export interface SubscriptionDashboardChurnAnalysis {
+  churn_trend: Array<{
+    month: string;
+    churn_rate: number;
+    cancelled_count: number;
+    active_at_start: number;
+  }>;
+  retention_rate: number;
+}
+
+export interface SubscriptionDashboardAlerts {
+  failed_payments: Array<{
+    name: string;
+    party?: string;
+    grand_total?: number;
+    creation?: string;
+    currency?: string;
+  }>;
+  subscriptions_expiring_soon: Array<{
+    name: string;
+    party?: string;
+    end_date?: string;
+    organization?: string;
+    customer_name?: string;
+  }>;
+  trials_ending_soon: Array<{
+    name: string;
+    party?: string;
+    trial_period_end?: string;
+    organization?: string;
+    customer_name?: string;
+  }>;
+}
+
+export interface SubscriptionDashboardData {
+  kpis: SubscriptionDashboardKPIs;
+  revenue_analytics: SubscriptionDashboardRevenueAnalytics;
+  subscription_metrics: SubscriptionDashboardMetrics;
+  customer_insights: SubscriptionDashboardCustomerInsights;
+  payment_billing_status: SubscriptionDashboardPaymentBilling;
+  plan_performance: SubscriptionDashboardPlanPerformance[];
+  churn_analysis: SubscriptionDashboardChurnAnalysis;
+  alerts: SubscriptionDashboardAlerts;
+}
+
+/**
+ * Fetch full Subscription Service Dashboard data (one call).
+ * Requires ERPNext auth. Scoped by current user's organizations (or all for Administrator).
+ */
+export async function getSubscriptionDashboard(params?: {
+  months?: number;
+  top_customers_limit?: number;
+  days_ahead?: number;
+}): Promise<{ success: boolean; data: SubscriptionDashboardData }> {
+  const token = await getERPNextToken();
+  if (!token) {
+    throw new Error(
+      "ERPNext authentication token not found. Please login first.",
+    );
+  }
+  const searchParams = new URLSearchParams();
+  if (params?.months != null) searchParams.set("months", String(params.months));
+  if (params?.top_customers_limit != null)
+    searchParams.set("top_customers_limit", String(params.top_customers_limit));
+  if (params?.days_ahead != null)
+    searchParams.set("days_ahead", String(params.days_ahead));
+  const qs = searchParams.toString();
+  const url = `/api/erpnext/subscription/dashboard${qs ? `?${qs}` : ""}`;
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    credentials: "include",
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({
+      message: "Failed to get subscription dashboard",
+    }));
+    throw new Error(
+      errorData.message || `HTTP error! status: ${response.status}`,
+    );
+  }
+  const json = await response.json();
+  const data = json.data ?? {};
+  return {
+    success: json.success !== false,
+    data: {
+      kpis: data.kpis ?? defaultDashboardKPIs(),
+      revenue_analytics: data.revenue_analytics ?? defaultRevenueAnalytics(),
+      subscription_metrics: data.subscription_metrics ?? defaultSubscriptionMetrics(),
+      customer_insights: data.customer_insights ?? defaultCustomerInsights(),
+      payment_billing_status:
+        data.payment_billing_status ?? defaultPaymentBilling(),
+      plan_performance: Array.isArray(data.plan_performance)
+        ? data.plan_performance
+        : [],
+      churn_analysis: data.churn_analysis ?? defaultChurnAnalysis(),
+      alerts: data.alerts ?? defaultAlerts(),
+    },
+  };
+}
+
+function defaultDashboardKPIs(): SubscriptionDashboardKPIs {
+  return {
+    monthly_revenue: 0,
+    mrr: 0,
+    active_subscriptions: 0,
+    new_subscriptions_this_month: 0,
+    churn_rate: 0,
+    trial_users: 0,
+    trial_conversion_rate: 0,
+  };
+}
+function defaultRevenueAnalytics(): SubscriptionDashboardRevenueAnalytics {
+  return { revenue_by_month: [], mrr_by_month: [], revenue_by_plan: [] };
+}
+function defaultSubscriptionMetrics(): SubscriptionDashboardMetrics {
+  return {
+    active_subscriptions: 0,
+    new_subscriptions_30d: 0,
+    cancelled_subscriptions_30d: 0,
+    expiring_soon: 0,
+    trial_conversion_rate: 0,
+  };
+}
+function defaultCustomerInsights(): SubscriptionDashboardCustomerInsights {
+  return {
+    total_customers: 0,
+    new_customers_7d: 0,
+    customers_by_plan: [],
+    top_customers: [],
+  };
+}
+function defaultPaymentBilling(): SubscriptionDashboardPaymentBilling {
+  return {
+    successful_payments_count: 0,
+    successful_payments_sample: [],
+    failed_payments_count: 0,
+    failed_payments_list: [],
+    outstanding_invoices_count: 0,
+    outstanding_invoices: [],
+    refunds_issued_count: 0,
+  };
+}
+function defaultChurnAnalysis(): SubscriptionDashboardChurnAnalysis {
+  return { churn_trend: [], retention_rate: 0 };
+}
+function defaultAlerts(): SubscriptionDashboardAlerts {
+  return {
+    failed_payments: [],
+    subscriptions_expiring_soon: [],
+    trials_ending_soon: [],
+  };
+}
