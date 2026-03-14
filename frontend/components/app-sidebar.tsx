@@ -14,6 +14,7 @@ import {
   Shield,
   Users,
   Store,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -94,6 +95,13 @@ const navigationItems = [
     id: "subscription",
     path: "/pages/subscription",
     requiredRole: undefined, // Available to all users
+  },
+  {
+    title: "Subscription Dashboard",
+    icon: BarChart3,
+    id: "subscriptionDashboard",
+    path: "/pages/subscription-dashboard",
+    requiredRole: "admin",
   },
   {
     title: "Subscription Management",

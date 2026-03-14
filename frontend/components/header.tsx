@@ -3,18 +3,38 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
-import { ChevronRight, Moon, Sun } from "lucide-react";
+import { ChevronRight, Moon, Sun, Bell, AlertCircle } from "lucide-react";
 import { useTheme } from '@/hooks/useTheme';
 import { useAuth } from '@/lib/auth/AuthProvider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
-interface props {
+export type AlertItem = {
+  id: string | number;
+  type?: string;
+  message: string;
+  severity: "error" | "warning" | "info";
+};
+
+interface HeaderProps {
   title?: string;
+  /** Optional alerts to show in the bell dropdown. If not provided, default mock alerts are used. */
+  alerts?: AlertItem[];
 }
 
-const Header = ({ title }: props) => {
+const defaultAlerts: AlertItem[] = [
+  { id: 1, type: "failed_payment", message: "2 failed payments in the last 24 hours", severity: "error" },
+  { id: 2, type: "expiring", message: "8 subscriptions expiring in the next 7 days", severity: "warning" },
+  { id: 3, type: "trial", message: "12 trials ending in the next 3 days", severity: "info" },
+];
+
+const Header = ({ title, alerts = defaultAlerts }: HeaderProps) => {
   const pathname = usePathname();
   const { isDarkMode, toggleTheme } = useTheme();
   const { user, isLoading } = useAuth();
@@ -140,9 +160,59 @@ const Header = ({ title }: props) => {
           ))}
         </nav>
 
-        {/* User Info and Dark Mode Toggle - Right Side */}
+        {/* User Info, Alerts, Dark Mode - Right Side */}
         {isMounted && (
-          <div className="ml-auto flex items-center gap-3" suppressHydrationWarning>
+          <div className="ml-auto flex items-center gap-2" suppressHydrationWarning>
+            {/* Alerts dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="relative rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  aria-label="Alerts and notifications"
+                >
+                  <Bell className="h-5 w-5" />
+                  {alerts.length > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+                      {alerts.length > 9 ? "9+" : alerts.length}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 p-0" sideOffset={8}>
+                <div className="border-b px-3 py-2">
+                  <p className="font-semibold text-sm">Alerts & Notifications</p>
+                  <p className="text-xs text-muted-foreground">Operational alerts</p>
+                </div>
+                <div className="max-h-[320px] overflow-y-auto">
+                  {alerts.length === 0 ? (
+                    <div className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      No new alerts
+                    </div>
+                  ) : (
+                    alerts.map((a) => (
+                      <div
+                        key={a.id}
+                        className={cn(
+                          "flex gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50",
+                          a.severity === "error" && "border-l-2 border-l-destructive bg-destructive/5",
+                          a.severity === "warning" && "border-l-2 border-l-amber-500 bg-amber-500/5",
+                          a.severity === "info" && "border-l-2 border-l-blue-500 bg-blue-500/5"
+                        )}
+                      >
+                        <AlertCircle className={cn(
+                          "h-4 w-4 shrink-0 mt-0.5",
+                          a.severity === "error" && "text-destructive",
+                          a.severity === "warning" && "text-amber-600 dark:text-amber-500",
+                          a.severity === "info" && "text-blue-600 dark:text-blue-400"
+                        )} />
+                        <p className="flex-1">{a.message}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {/* Dark Mode Toggle */}
             <div
               className="text-muted-foreground hover:text-foreground transition-colors duration-300 cursor-pointer"
