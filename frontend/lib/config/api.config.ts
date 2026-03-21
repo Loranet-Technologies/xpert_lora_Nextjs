@@ -77,6 +77,8 @@ export const ERPNEXT_API_URLS = {
   DELETE_USER: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.delete_user`,
   RESET_USER_PASSWORD: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.reset_user_password`,
   CHANGE_PASSWORD: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.change_password`,
+  /** Paginated User Activity Log (Admin/SuperAdmin); implement `list_user_activity_logs` in xpert_lora_app.api. */
+  LIST_USER_ACTIVITY_LOGS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.list_user_activity_logs`,
   USER_RESOURCE: `${ERPNext_BASE_URL}/api/resource/User`,
 
   // Device Events

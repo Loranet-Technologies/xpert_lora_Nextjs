@@ -276,6 +276,7 @@ export async function updateUser(
     first_name?: string;
     middle_name?: string;
     last_name?: string;
+    user_image?: string;
     username?: string;
     role?: string;
     language?: string;

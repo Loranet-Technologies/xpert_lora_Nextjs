@@ -22,6 +22,9 @@
 
 # misc
 .DS_Store
+
+# local activity audit store (Next.js API file persistence)
+.data/
 *.pem
 
 # debug
