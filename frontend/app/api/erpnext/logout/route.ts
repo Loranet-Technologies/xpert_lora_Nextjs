@@ -14,17 +14,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Forward the logout request to ERPNext with token
-    await fetch(ERPNEXT_API_URLS.FRAPPE_LOGOUT, {
+    const headers: HeadersInit = {
+      Authorization: `Bearer ${token}`,
+      Cookie: `sid=${token}`, // Also send as cookie for ERPNext compatibility
+    };
+
+    // Prefer custom app logout endpoint so server-side audit logging can run.
+    let response = await fetch(ERPNEXT_API_URLS.LOGOUT, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Cookie: `sid=${token}`, // Also send as cookie for ERPNext compatibility
-      },
+      headers,
     });
 
+    // Fallback to frappe logout for compatibility.
+    if (!response.ok) {
+      response = await fetch(ERPNEXT_API_URLS.FRAPPE_LOGOUT, {
+        method: "POST",
+        headers,
+      });
+    }
+
     // Return success response
-    return NextResponse.json({ success: true });
+    if (response.ok) {
+      return NextResponse.json({ success: true });
+    }
+
+    const text = await response.text().catch(() => "");
+    return NextResponse.json(
+      {
+        success: false,
+        message: text || "Logout failed",
+      },
+      { status: response.status || 500 }
+    );
   } catch (error) {
     console.error("ERPNext logout proxy error:", error);
     return NextResponse.json(

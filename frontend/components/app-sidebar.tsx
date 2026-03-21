@@ -5,6 +5,7 @@ import {
   Building2,
   ClipboardList,
   Settings,
+  SlidersHorizontal,
   Smartphone,
   Radio,
   LogOut,
@@ -15,6 +16,7 @@ import {
   Users,
   Store,
   BarChart3,
+  ScrollText,
 } from "lucide-react";
 import {
   Sidebar,
@@ -61,6 +63,7 @@ const navigationItems = [
     path: "/pages/applications",
     requiredRole: undefined, // Available to all users
   },
+
   {
     title: "Device Profile",
     icon: Settings,
@@ -115,13 +118,27 @@ const navigationItems = [
     icon: Users,
     id: "usersManagement",
     path: "/pages/users",
-    requiredRole: undefined, // Available to all users
+    requiredRole: "admin", // Admin only
+  },
+  {
+    title: "Activity logs",
+    icon: ScrollText,
+    id: "activityLogs",
+    path: "/pages/activity-logs",
+    requiredRole: "admin",
   },
   {
     title: "Merchant Management",
     icon: Store,
     id: "merchants",
     path: "/pages/merchants",
+    requiredRole: undefined, // Available to all users
+  },
+  {
+    title: "Settings",
+    icon: SlidersHorizontal,
+    id: "settings",
+    path: "/pages/settings",
     requiredRole: undefined, // Available to all users
   },
 ];
