@@ -1093,7 +1093,8 @@ export async function getSubscriptionDashboard(params?: {
     data: {
       kpis: data.kpis ?? defaultDashboardKPIs(),
       revenue_analytics: data.revenue_analytics ?? defaultRevenueAnalytics(),
-      subscription_metrics: data.subscription_metrics ?? defaultSubscriptionMetrics(),
+      subscription_metrics:
+        data.subscription_metrics ?? defaultSubscriptionMetrics(),
       customer_insights: data.customer_insights ?? defaultCustomerInsights(),
       payment_billing_status:
         data.payment_billing_status ?? defaultPaymentBilling(),

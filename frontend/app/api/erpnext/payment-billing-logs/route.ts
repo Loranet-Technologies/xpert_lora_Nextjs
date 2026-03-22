@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
 
 /**
- * GET - Get all data for the Subscription page in one call.
- * Proxies to xpert_lora_app.api.get_subscription_page_data.
- * Returns: { success, has_subscription, organizations, plans }
- * Frontend shows loading until this returns, then renders "My Subscriptions" or "All Plans" with no flash.
+ * GET — Payment Transaction Log list (newest first).
+ * Proxies to xpert_lora_app.api.get_payment_billing_logs.
+ *
+ * Query (all optional except auth): status, from_date, to_date, limit, start, include_payload.
+ * Access is enforced by ERPNext read permission on Payment Transaction Log.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,6 +20,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { searchParams } = new URL(request.url);
+
     const headers: HeadersInit = {
       "Content-Type": "application/json",
     };
@@ -31,51 +34,49 @@ export async function GET(request: NextRequest) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(ERPNEXT_API_URLS.GET_SUBSCRIPTION_PAGE_DATA, {
+    const url = `${ERPNEXT_API_URLS.GET_PAYMENT_BILLING_LOGS}?${searchParams.toString()}`;
+
+    const response = await fetch(url, {
       method: "GET",
       headers,
     });
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      const errorData: { message?: string } = {
-        message: "Failed to get subscription page data",
+      let errorData: { message?: string } = {
+        message: "Failed to get payment billing logs",
       };
       try {
-        const parsed = JSON.parse(errorText);
-        if (parsed.message && typeof parsed.message === "object") {
+        errorData = JSON.parse(errorText);
+        if (errorData.message && typeof errorData.message === "object") {
           errorData.message =
-            parsed.message.exc_message ||
-            parsed.message.message ||
-            JSON.stringify(parsed.message);
-        } else if (parsed.message) {
-          errorData.message = parsed.message;
+            (errorData.message as { exc_message?: string }).exc_message ??
+            (errorData.message as { message?: string }).message ??
+            String(errorData.message);
         }
       } catch {
-        errorData.message = errorText || errorData.message;
+        errorData = {
+          message: errorText || "Failed to get payment billing logs",
+        };
       }
       return NextResponse.json(
-        {
-          message: errorData.message || "Failed to get subscription page data",
-        },
+        { message: errorData.message || "Failed to get payment billing logs" },
         { status: response.status },
       );
     }
 
     const data = await response.json();
-    // Frappe wraps whitelisted method return value in message
     const payload = data.message ?? data;
+    const rows = Array.isArray(payload.data) ? payload.data : [];
+    const total =
+      typeof payload.total === "number" ? payload.total : rows.length;
     return NextResponse.json({
       success: payload.success !== false,
-      has_subscription: Boolean(payload.has_subscription),
-      has_active_subscription: Boolean(payload.has_active_subscription),
-      can_subscribe: Boolean(payload.can_subscribe),
-      organizations: payload.organizations || [],
-      organizations_for_subscribe: payload.organizations_for_subscribe || [],
-      plans: payload.plans || [],
+      data: rows,
+      total,
     });
   } catch (error) {
-    console.error("ERPNext get subscription page data error:", error);
+    console.error("ERPNext payment-billing-logs GET error:", error);
     return NextResponse.json(
       {
         message:

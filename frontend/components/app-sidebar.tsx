@@ -17,6 +17,7 @@ import {
   Store,
   BarChart3,
   ScrollText,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -126,6 +127,13 @@ const navigationItems = [
     id: "activityLogs",
     path: "/pages/activity-logs",
     requiredRole: "admin",
+  },
+  {
+    title: "Payment & billing logs",
+    icon: Receipt,
+    id: "paymentBillingLogs",
+    path: "/pages/payment-billing-logs",
+    requiredRole: "admin", // Admin only
   },
   {
     title: "Merchant Management",
