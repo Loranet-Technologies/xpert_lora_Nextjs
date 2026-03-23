@@ -18,6 +18,7 @@ import {
   BarChart3,
   ScrollText,
   Receipt,
+  FileClock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -126,6 +127,13 @@ const navigationItems = [
     icon: ScrollText,
     id: "activityLogs",
     path: "/pages/activity-logs",
+    requiredRole: "admin",
+  },
+  {
+    title: "Subscription lifecycle logs",
+    icon: FileClock,
+    id: "subscriptionLifecycleLogs",
+    path: "/pages/subscription-lifecycle-logs",
     requiredRole: "admin",
   },
   {
