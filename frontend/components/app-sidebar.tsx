@@ -261,10 +261,11 @@ export function AppSidebar({
           className="w-full cursor-pointer justify-start gap-2 text-red-600 hover:text-white hover:bg-red-600 dark:text-red-400 dark:hover:text-white dark:hover:bg-red-600 transition-colors"
           variant="ghost"
           size="default"
+          title="Logout"
           onClick={() => logout()}
         >
           <LogOut className="h-4 w-4" />
-          <span>Logout</span>
+          <span className="group-data-[collapsible=icon]:hidden">Logout</span>
         </Button>
       </SidebarFooter>
       <SidebarRail />
