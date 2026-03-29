@@ -14,6 +14,7 @@ import { Badge } from "./ui/badge";
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import subscriptionPlansMock from "@/data/subscription-plans.mock.json";
+import { LandingUserGuide } from "@/components/user-guide/LandingUserGuide";
 
 interface PlanFeature {
   text: string;
@@ -62,6 +63,19 @@ export default function LandingPage() {
     setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const id = window.location.hash.replace(/^#/, "");
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, []);
+
   const handleSubscribe = () => {
     sessionStorage.setItem("post_login_redirect", "/pages/subscription");
     window.location.href = "/login";
@@ -106,6 +120,13 @@ export default function LandingPage() {
               onClick={() => scrollTo("about")}
             >
               About
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-muted-foreground hover:text-primary"
+              onClick={() => scrollTo("user-guide")}
+            >
+              User Guide
             </Button>
           </nav>
           <div className="flex items-center gap-3">
@@ -159,16 +180,16 @@ export default function LandingPage() {
                 className="inline-flex w-fit gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary border-primary/20"
               >
                 <MaterialIcon name="verified" className="text-sm" />
-                v2.0 Now Live
+                Platform v2 — live
               </Badge>
               <h1 className="text-4xl lg:text-6xl font-black leading-[1.1] tracking-tight">
-                Professional <span className="text-primary">LoRaWAN</span>{" "}
-                Management
+                Run <span className="text-primary">LoRaWAN</span> at scale, with
+                clarity
               </h1>
               <p className="text-lg text-muted-foreground max-w-[500px] leading-relaxed">
-                Simplify device, gateway, and tenant management with Xpert LoRa.
-                The most robust enterprise-ready network stack for scaling IoT
-                infrastructure.
+                Xpert LoRa brings devices, gateways, and tenants together in one
+                place—so your team can operate networks with confidence, not
+                guesswork.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Button
@@ -192,7 +213,7 @@ export default function LandingPage() {
               </div>
               <div className="flex items-center gap-6 pt-4 opacity-60">
                 <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                  Trusted By
+                  Built for operators
                 </span>
                 <div className="flex gap-4 text-3xl text-muted-foreground">
                   <MaterialIcon name="sensors" />
@@ -222,11 +243,11 @@ export default function LandingPage() {
           <div className="max-w-[1200px] mx-auto">
             <div className="text-center mb-16 space-y-4">
               <h2 className="text-3xl lg:text-5xl font-black tracking-tight">
-                Advanced Features for Scalable Networks
+                Everything you need in one control plane
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Everything you need to manage your global IoT infrastructure
-                from a single pane of glass.
+                From first device to full fleet—provision, observe, and govern
+                your LoRaWAN estate without switching tools.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -235,10 +256,10 @@ export default function LandingPage() {
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform text-3xl">
                     <MaterialIcon name="developer_board" />
                   </div>
-                  <CardTitle className="text-xl">Device Management</CardTitle>
+                  <CardTitle className="text-xl">Device management</CardTitle>
                   <CardDescription>
-                    Easily provision, organize, and manage thousands of LoRaWAN
-                    nodes with bulk import and automated OTAA.
+                    Provision and organize LoRaWAN end devices at volume—bulk
+                    import, structured inventory, and smooth OTAA workflows.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -247,10 +268,10 @@ export default function LandingPage() {
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform text-3xl">
                     <MaterialIcon name="settings_input_antenna" />
                   </div>
-                  <CardTitle className="text-xl">Gateway Monitoring</CardTitle>
+                  <CardTitle className="text-xl">Gateway monitoring</CardTitle>
                   <CardDescription>
-                    Real-time health tracking, packet RSSI/SNR metrics, and
-                    uptime logs for your entire gateway fleet.
+                    See gateway health as it happens—RSSI/SNR, packet flow, and
+                    uptime signals so you catch issues before users do.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -259,12 +280,10 @@ export default function LandingPage() {
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform text-3xl">
                     <MaterialIcon name="groups_3" />
                   </div>
-                  <CardTitle className="text-xl">
-                    Multi-tenant Support
-                  </CardTitle>
+                  <CardTitle className="text-xl">Multi-tenant support</CardTitle>
                   <CardDescription>
-                    Securely isolate data and manage RBAC for different clients,
-                    departments, or project teams.
+                    Keep customers and teams separate with clear boundaries—data
+                    isolation and role-aware access that scales with your org.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -273,10 +292,10 @@ export default function LandingPage() {
                   <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform text-3xl">
                     <MaterialIcon name="query_stats" />
                   </div>
-                  <CardTitle className="text-xl">Dashboards</CardTitle>
+                  <CardTitle className="text-xl">Dashboards &amp; insight</CardTitle>
                   <CardDescription>
-                    Customizable visual interfaces for deep insights into
-                    network traffic and payload data visualization.
+                    Turn traffic and payloads into answers—views you can tailor
+                    for operators, NOC, and stakeholders.
                   </CardDescription>
                 </CardHeader>
               </Card>
@@ -294,15 +313,16 @@ export default function LandingPage() {
               >
                 <MaterialIcon name="info" className="h-4 w-4 text-primary" />
                 <span className="text-primary font-semibold uppercase tracking-wider text-xs">
-                  Please register or login to manage your subscriptions
+                  Sign in to subscribe, pay, and manage your account
                 </span>
               </Badge>
               <h2 className="text-3xl lg:text-5xl font-black mb-4 tracking-tight">
-                Network Management Plans
+                Plans that fit how you grow
               </h2>
               <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-                Scale your LoRaWAN deployment with ease. Choose a plan that
-                matches your device density and monitoring needs.
+                Every plan includes smart usage controls designed to keep your
+                network running smoothly and efficiently. Pick the tier that
+                matches your devices, traffic, and support needs.
               </p>
             </div>
 
@@ -383,36 +403,46 @@ export default function LandingPage() {
             {/* Choose Your Plan Guide */}
             <div className="mt-16 rounded-2xl border-2 bg-muted/30 p-8">
               <h2 className="text-xl font-bold mb-6 text-center">
-                Not sure which plan to pick?
+                Which plan is right for you?
               </h2>
               <div className="grid gap-4 sm:grid-cols-3 text-center">
                 <div className="space-y-2">
-                  <p className="font-medium">Just getting started?</p>
+                  <p className="font-medium">Learning and pilots</p>
                   <p className="text-sm text-muted-foreground">
-                    Start with Personal Basic — perfect for trying LoRaWAN with
-                    a few devices.
+                    Personal Basic is a practical entry point—enough room to
+                    prove value with a small device footprint.
                   </p>
                 </div>
                 <div className="space-y-2 border-y sm:border-y-0 sm:border-x border-border py-4 sm:py-0">
-                  <p className="font-medium">Growing your deployment?</p>
+                  <p className="font-medium">Production rollouts</p>
                   <p className="text-sm text-muted-foreground">
-                    Starter SME is ideal — more devices, payment integration,
-                    and support.
+                    Starter SME adds headroom—more devices, billing hooks, and
+                    room for a growing operation.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <p className="font-medium">Need custom solutions?</p>
+                  <p className="font-medium">Programs at scale</p>
                   <p className="text-sm text-muted-foreground">
-                    Business or Enterprise — tailored devices, SLA, and
-                    dedicated support.
+                    Business or Enterprise tiers align with larger fleets, SLAs,
+                    and the kind of support serious deployments expect.
                   </p>
                 </div>
               </div>
               <p className="mt-6 text-center text-sm text-muted-foreground">
-                All plans include gateway monitoring. You can change or upgrade
-                anytime.
+                Gateway monitoring is included across tiers. Upgrade or adjust
+                your plan whenever your network evolves.
               </p>
             </div>
+          </div>
+        </section>
+
+        {/* User Guide */}
+        <section
+          id="user-guide"
+          className="scroll-mt-28 px-6 lg:px-16 py-24 bg-muted/40 border-y border-border/60"
+        >
+          <div className="max-w-[1200px] mx-auto">
+            <LandingUserGuide />
           </div>
         </section>
 
@@ -425,11 +455,12 @@ export default function LandingPage() {
                 <div className="absolute -right-20 -bottom-20 size-80 rounded-full bg-white/10 blur-3xl" />
                 <div className="relative space-y-6">
                   <h2 className="text-4xl lg:text-6xl font-black tracking-tight leading-tight text-primary-foreground">
-                    Ready to Connect Your World?
+                    Ready to bring your network online?
                   </h2>
                   <p className="text-primary-foreground/80 text-lg">
-                    Join hundreds of companies scaling their IoT solutions with
-                    the most powerful LoRaWAN stack available today.
+                    Create an account and move from trial devices to a managed
+                    LoRaWAN operation—with usage controls that stay aligned to
+                    your plan.
                   </p>
                   <div className="pt-4">
                     <Button
@@ -461,7 +492,8 @@ export default function LandingPage() {
               </span>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The global standard for professional LoRaWAN network management.
+              LoRaWAN operations, billing, and smart usage controls—one platform
+              for teams that ship real deployments.
             </p>
           </div>
           <div className="space-y-4">
@@ -475,6 +507,13 @@ export default function LandingPage() {
                 onClick={() => scrollTo("features")}
               >
                 Features
+              </Button>
+              <Button
+                variant="link"
+                className="justify-start h-auto p-0 text-muted-foreground hover:text-primary"
+                onClick={() => scrollTo("user-guide")}
+              >
+                User Guide
               </Button>
               <Link
                 href="#"
@@ -545,7 +584,7 @@ export default function LandingPage() {
         </div>
         <div className="max-w-[1200px] mx-auto mt-12 pt-8 border-t text-center text-xs text-muted-foreground">
           © {new Date().getFullYear()} Xpert LoRa Management Systems. All rights
-          reserved. Built with precision for the IoT era.
+          reserved.
         </div>
       </footer>
     </div>

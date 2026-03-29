@@ -47,7 +47,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
       <div className="absolute top-4 left-4 z-10">
         <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
           ← Back to plans
@@ -106,7 +106,7 @@ export default function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-muted-foreground">
+              <span className="bg-background px-2 text-muted-foreground">
                 Or
               </span>
             </div>

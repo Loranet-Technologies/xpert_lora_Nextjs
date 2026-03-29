@@ -102,6 +102,7 @@ import {
   getPaymentStatus,
 } from "@/lib/api/payment/payment";
 import { getERPNextToken } from "@/lib/api/utils/token";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type OrganizationType = "Customer" | "Government" | "System Owner Company";
@@ -221,6 +222,7 @@ const SubscriptionPageInner = () => {
   const [loaderMinTimeElapsed, setLoaderMinTimeElapsed] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { refetchAccess } = useSubscriptionAccess();
 
   useEffect(() => {
     const t = setTimeout(() => setLoaderMinTimeElapsed(true), 400);
@@ -282,6 +284,7 @@ const SubscriptionPageInner = () => {
             setReturnPaymentStatus("paid");
             setSuccess("Payment recorded. Your subscription is active.");
             setRefreshSubscriptionsTrigger((t) => t + 1);
+            refetchAccess();
             return;
           }
           if (res.status === "Cancelled") {
@@ -315,7 +318,7 @@ const SubscriptionPageInner = () => {
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [searchParams, refetchAccess]);
 
   // Single API call: subscription page data (has_subscription, active status, can_subscribe, organizations, plans) — no flash
   useEffect(() => {
@@ -799,6 +802,16 @@ const SubscriptionPageInner = () => {
         <Header />
         <div className="flex flex-1 flex-col gap-4 p-6 animate-in fade-in-0 duration-300">
           <div className="mx-auto w-full max-w-7xl space-y-12">
+            {searchParams.get("suspended") === "1" && (
+              <Alert variant="destructive" className="border-destructive/80">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  Your account is on hold because your subscription is inactive
+                  or payment did not complete. Complete payment below to restore
+                  access to applications, devices, gateways, and integrations.
+                </AlertDescription>
+              </Alert>
+            )}
             {/* Header - show My Subscription title when user has subscription, otherwise Subscription Plans */}
             <div
               className={
@@ -833,8 +846,8 @@ const SubscriptionPageInner = () => {
                     Subscription Plans
                   </h1>
                   <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                    Select the perfect plan for your LoRaWAN network needs. All
-                    plans include usage limits that are enforced by the system.
+                    Every plan includes smart usage controls designed to keep your
+                    network running smoothly and efficiently.
                   </p>
                 </>
               )}
@@ -1462,7 +1475,8 @@ const SubscriptionPageInner = () => {
                     How It Works
                   </CardTitle>
                   <CardDescription>
-                    Understanding subscription plans and limits
+                    Plans, billing, and how smart usage controls support your
+                    network
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -1480,12 +1494,12 @@ const SubscriptionPageInner = () => {
                     <div className="space-y-2">
                       <h4 className="font-semibold flex items-center gap-2">
                         <Shield className="h-4 w-4" />
-                        System Enforcement
+                        Smart usage controls
                       </h4>
                       <p className="text-sm text-muted-foreground">
-                        All limits (devices, messages, data) are automatically
-                        enforced by the system. Exceeding limits will block or
-                        warn.
+                        Devices, messages, and data follow the allowances in your
+                        plan. If you approach or exceed those limits, the
+                        platform may warn you or apply temporary restrictions.
                       </p>
                     </div>
                     <div className="space-y-2">
