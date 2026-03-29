@@ -34,6 +34,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useSubscriptionAccess } from "@/components/subscription/SubscriptionAccessProvider";
 import { useNavigation } from "@/components/customHooks/useNavigation";
 import { mapPathToTab } from "@/utils/mapPathToTab";
 import { usePathname, useRouter } from "next/navigation";
@@ -50,6 +51,7 @@ const navigationItems = [
     id: "dashboard",
     path: "/pages/dashboard",
     requiredRole: undefined, // Available to all users
+    requiresActiveSubscription: false,
   },
   {
     title: "Organizations",
@@ -100,6 +102,7 @@ const navigationItems = [
     id: "subscription",
     path: "/pages/subscription",
     requiredRole: undefined, // Available to all users
+    requiresActiveSubscription: false,
   },
   {
     title: "Subscription Dashboard",
@@ -148,7 +151,7 @@ const navigationItems = [
     icon: Store,
     id: "merchants",
     path: "/pages/merchants",
-    requiredRole: undefined, // Available to all users
+    requiredRole: "admin", // Admin only
   },
   {
     title: "Settings",
@@ -156,6 +159,7 @@ const navigationItems = [
     id: "settings",
     path: "/pages/settings",
     requiredRole: undefined, // Available to all users
+    requiresActiveSubscription: false,
   },
 ];
 
@@ -169,6 +173,8 @@ export function AppSidebar({
   setActiveTab: propSetActiveTab,
 }: AppSidebarProps) {
   const { user, logout } = useAuth();
+  const { isProductSuspended, isLoading: subscriptionAccessLoading } =
+    useSubscriptionAccess();
   const router = useRouter();
   const pathname = usePathname();
   const { activeTab: hookActiveTab, setActiveTabState } = useNavigation();
@@ -240,18 +246,36 @@ export function AppSidebar({
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {filteredNavigationItems.map((item) => (
-                <SidebarMenuItem key={item.id}>
-                  <SidebarMenuButton
-                    tooltip={item.title}
-                    isActive={activeTab === item.id}
-                    onClick={() => handleNavigation(item.path, item.id)}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {filteredNavigationItems.map((item) => {
+                const navItem = item as (typeof navigationItems)[number];
+                const requiresSub =
+                  navItem.requiresActiveSubscription !== false;
+                const locked =
+                  isProductSuspended &&
+                  !subscriptionAccessLoading &&
+                  requiresSub;
+                return (
+                  <SidebarMenuItem key={item.id}>
+                    <SidebarMenuButton
+                      tooltip={
+                        locked
+                          ? "Account on hold — open Subscription to complete payment and restore access."
+                          : item.title
+                      }
+                      isActive={activeTab === item.id}
+                      disabled={locked}
+                      className={locked ? "opacity-50" : undefined}
+                      onClick={() => {
+                        if (locked) return;
+                        handleNavigation(item.path, item.id);
+                      }}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

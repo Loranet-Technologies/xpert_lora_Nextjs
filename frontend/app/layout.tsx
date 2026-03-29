@@ -4,6 +4,10 @@ import "./globals.css";
 import { AuthProvider } from "../lib/auth/AuthProvider";
 import { SessionProviderWrapper } from "../components/providers/SessionProviderWrapper";
 import { QueryProvider } from "../components/providers/QueryProvider";
+import {
+  SubscriptionAccessProvider,
+  SubscriptionAccessGuard,
+} from "../components/subscription/SubscriptionAccessProvider";
 import { Toaster } from "../components/ui/toast";
 import { ThemeProvider } from "../hooks/useTheme";
 const geistSans = Geist({
@@ -40,7 +44,11 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SessionProviderWrapper>
-              <AuthProvider>{children}</AuthProvider>
+              <AuthProvider>
+                <SubscriptionAccessProvider>
+                  <SubscriptionAccessGuard>{children}</SubscriptionAccessGuard>
+                </SubscriptionAccessProvider>
+              </AuthProvider>
             </SessionProviderWrapper>
           </QueryProvider>
         </ThemeProvider>

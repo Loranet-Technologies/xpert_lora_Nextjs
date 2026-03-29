@@ -1,25 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { ERPNEXT_API_URLS } from '@/lib/config/api.config';
-import { parseErpNextError } from '@/lib/api/utils/parseErpNextError';
+import { NextRequest, NextResponse } from "next/server";
+import { ERPNEXT_API_URLS } from "@/lib/config/api.config";
+import { parseErpNextError } from "@/lib/api/utils/parseErpNextError";
 
 // GET - List users
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || null;
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || null;
 
     if (!token) {
       return NextResponse.json(
-        { message: 'Authorization token required' },
-        { status: 401 }
+        { message: "Authorization token required" },
+        { status: 401 },
       );
     }
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const page = searchParams.get('page') || '1';
-    const page_length = searchParams.get('page_length') || '20';
-    const search_term = searchParams.get('search_term') || '';
+    const page = searchParams.get("page") || "1";
+    const page_length = searchParams.get("page_length") || "20";
+    const search_term = searchParams.get("search_term") || "";
 
     // Build query string for ERPNext
     let queryString = `page=${page}&page_length=${page_length}`;
@@ -29,25 +29,25 @@ export async function GET(request: NextRequest) {
 
     // Format headers
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
-    if (token.startsWith('Token ')) {
-      headers['Authorization'] = token;
-    } else if (token.includes(':')) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (token.startsWith("Token ")) {
+      headers["Authorization"] = token;
+    } else if (token.includes(":")) {
+      headers["Authorization"] = `Bearer ${token}`;
     } else {
-      headers['Cookie'] = `sid=${token}`;
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Cookie"] = `sid=${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     // Try GET first, then POST if GET fails (ERPNext API methods can be called either way)
     let response = await fetch(
       `${ERPNEXT_API_URLS.LIST_USERS}?${queryString}`,
       {
-        method: 'GET',
+        method: "GET",
         headers,
-      }
+      },
     );
 
     // If GET fails, try POST with JSON body
@@ -62,35 +62,41 @@ export async function GET(request: NextRequest) {
       }
 
       response = await fetch(ERPNEXT_API_URLS.LIST_USERS, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(requestBody),
       });
     }
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      const errorMessage = parseErpNextError(errorText, 'Failed to list users');
-      
+      const errorText = await response.text().catch(() => "");
+      const errorMessage = parseErpNextError(errorText, "Failed to list users");
+
       console.error(
         `Failed to list users: ${response.status} - ${errorMessage}`,
-        { errorText }
+        { errorText },
       );
 
       return NextResponse.json(
-        { success: false, message: errorMessage, error: errorMessage, data: [], total: 0 },
-        { status: response.status }
+        {
+          success: false,
+          message: errorMessage,
+          error: errorMessage,
+          data: [],
+          total: 0,
+        },
+        { status: response.status },
       );
     }
 
     const data = await response.json();
     // ERPNext API methods return { message: {...} }, unwrap it
     const result = data.message || data;
-    
+
     // Ensure the response has the expected structure
-    if (result && typeof result === 'object') {
+    if (result && typeof result === "object") {
       // If result already has success field, return as is
-      if ('success' in result) {
+      if ("success" in result) {
         return NextResponse.json(result);
       }
       // Otherwise wrap it
@@ -99,7 +105,7 @@ export async function GET(request: NextRequest) {
         ...result,
       });
     }
-    
+
     // Fallback
     return NextResponse.json({
       success: true,
@@ -110,12 +116,13 @@ export async function GET(request: NextRequest) {
       total_pages: 0,
     });
   } catch (error) {
-    console.error('ERPNext list users proxy error:', error);
+    console.error("ERPNext list users proxy error:", error);
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : 'Internal server error',
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -123,13 +130,13 @@ export async function GET(request: NextRequest) {
 // POST - Create user
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '') || null;
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || null;
 
     if (!token) {
       return NextResponse.json(
-        { message: 'Authorization token required' },
-        { status: 401 }
+        { message: "Authorization token required" },
+        { status: 401 },
       );
     }
 
@@ -137,69 +144,76 @@ export async function POST(request: NextRequest) {
 
     // Format headers
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
 
-    if (token.startsWith('Token ')) {
-      headers['Authorization'] = token;
-    } else if (token.includes(':')) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (token.startsWith("Token ")) {
+      headers["Authorization"] = token;
+    } else if (token.includes(":")) {
+      headers["Authorization"] = `Bearer ${token}`;
     } else {
-      headers['Cookie'] = `sid=${token}`;
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Cookie"] = `sid=${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     // Forward to ERPNext
     const response = await fetch(ERPNEXT_API_URLS.CREATE_USER, {
-      method: 'POST',
+      method: "POST",
       headers,
       body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      const errorMessage = parseErpNextError(errorText, 'Failed to create user');
-      
+      const errorText = await response.text().catch(() => "");
+      const errorMessage = parseErpNextError(
+        errorText,
+        "Failed to create user",
+      );
+
       console.error(
         `Failed to create user: ${response.status} - ${errorMessage}`,
-        { errorText }
+        { errorText },
       );
 
       return NextResponse.json(
         { success: false, message: errorMessage, error: errorMessage },
-        { status: response.status }
+        { status: response.status },
       );
     }
 
     const data = await response.json();
     // ERPNext API methods return { message: {...} }, unwrap it
     const result = data.message || data;
-    
+
     // If result already has success field, return as is (preserve error responses)
-    if (result && typeof result === 'object' && 'success' in result) {
+    if (result && typeof result === "object" && "success" in result) {
       // If it's an error response, make sure it's properly formatted
       if (result.success === false) {
-        return NextResponse.json({
-          success: false,
-          message: result.message || 'Error',
-          error: result.error || result.message || 'An error occurred',
-        }, { status: response.status >= 400 ? response.status : 400 });
+        return NextResponse.json(
+          {
+            success: false,
+            message: result.message || "Error",
+            error: result.error || result.message || "An error occurred",
+          },
+          { status: response.status >= 400 ? response.status : 400 },
+        );
       }
       return NextResponse.json(result);
     }
-    
+
     // Otherwise wrap it
     return NextResponse.json({
       success: true,
       ...result,
     });
   } catch (error) {
-    console.error('ERPNext create user proxy error:', error);
+    console.error("ERPNext create user proxy error:", error);
     return NextResponse.json(
       {
-        message: error instanceof Error ? error.message : 'Internal server error',
+        message:
+          error instanceof Error ? error.message : "Internal server error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

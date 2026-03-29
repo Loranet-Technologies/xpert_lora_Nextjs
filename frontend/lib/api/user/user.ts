@@ -1,4 +1,4 @@
-import { getERPNextToken } from '../utils/token';
+import { getERPNextToken } from "../utils/token";
 
 export interface UserDetail {
   name: string;
@@ -78,13 +78,13 @@ export async function listUsers(params?: {
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
     const page = params?.page || 1;
     const page_length = params?.page_length || 20;
-    const search_term = params?.search_term || '';
+    const search_term = params?.search_term || "";
 
     // Build query parameters
     let queryParams = `page=${page}&page_length=${page_length}`;
@@ -93,34 +93,34 @@ export async function listUsers(params?: {
     }
 
     const response = await fetch(`/api/erpnext/users?${queryParams}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      credentials: 'include',
+      credentials: "include",
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
+      const errorText = await response.text().catch(() => "");
       let errorData: { message?: string; error?: string } = {
-        message: 'Failed to fetch users',
+        message: "Failed to fetch users",
       };
 
       try {
         const parsed = JSON.parse(errorText);
-        if (parsed && typeof parsed === 'object') {
+        if (parsed && typeof parsed === "object") {
           errorData = parsed;
         }
       } catch {
-        errorData = { message: errorText || 'Failed to fetch users' };
+        errorData = { message: errorText || "Failed to fetch users" };
       }
 
       const errorMessage =
         errorData.message ||
         errorData.error ||
         `HTTP error! status: ${response.status}`;
-      console.error('Failed to fetch users:', {
+      console.error("Failed to fetch users:", {
         status: response.status,
         statusText: response.statusText,
         errorData,
@@ -130,14 +130,14 @@ export async function listUsers(params?: {
     }
 
     const data = await response.json();
-    
+
     // Ensure response has expected structure
-    if (data && typeof data === 'object') {
+    if (data && typeof data === "object") {
       // If data has success field and it's false, treat as error
       if (data.success === false) {
-        throw new Error(data.message || data.error || 'Failed to fetch users');
+        throw new Error(data.message || data.error || "Failed to fetch users");
       }
-      
+
       // Ensure data array exists
       if (data.data === undefined && Array.isArray(data)) {
         // If data is directly an array, wrap it
@@ -150,10 +150,10 @@ export async function listUsers(params?: {
           total_pages: Math.ceil(data.length / page_length),
         };
       }
-      
+
       return data;
     }
-    
+
     // Fallback: return empty result
     return {
       success: true,
@@ -164,7 +164,7 @@ export async function listUsers(params?: {
       total_pages: 0,
     };
   } catch (error) {
-    console.error('Failed to list users:', error);
+    console.error("Failed to list users:", error);
     throw error;
   }
 }
@@ -176,94 +176,94 @@ export async function getUser(userName?: string): Promise<GetUserResponse> {
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    let queryParams = '';
+    let queryParams = "";
     if (userName) {
       queryParams = `?user_name=${encodeURIComponent(userName)}`;
     }
 
     const response = await fetch(`/api/erpnext/users/user${queryParams}`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      credentials: 'include',
+      credentials: "include",
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({
-        message: 'Failed to fetch user',
+        message: "Failed to fetch user",
       }));
       throw new Error(
-        errorData.message || `HTTP error! status: ${response.status}`
+        errorData.message || `HTTP error! status: ${response.status}`,
       );
     }
 
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Failed to get user:', error);
+    console.error("Failed to get user:", error);
     throw error;
   }
 }
 
 // Create a new user
-export async function createUser(
-  userData: {
-    email: string;
-    first_name: string;
-    role: string;
-    username?: string;
-    middle_name?: string;
-    last_name?: string;
-    language?: string;
-    enabled?: number;
-    password?: string;
-  }
-): Promise<CreateUserResponse> {
+export async function createUser(userData: {
+  email: string;
+  first_name: string;
+  role: string;
+  username?: string;
+  middle_name?: string;
+  last_name?: string;
+  language?: string;
+  enabled?: number;
+  password?: string;
+}): Promise<CreateUserResponse> {
   try {
     const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    const response = await fetch('/api/erpnext/users', {
-      method: 'POST',
+    const response = await fetch("/api/erpnext/users", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify(userData),
     });
 
     const data = await response.json().catch(() => ({
       success: false,
-      message: 'Failed to create user',
-      error: 'Invalid response from server',
+      message: "Failed to create user",
+      error: "Invalid response from server",
     }));
 
     // Check if the response indicates an error (even if status is 200)
     if (data.success === false) {
-      const errorMessage = data.error || data.message || 'Failed to create user';
+      const errorMessage =
+        data.error || data.message || "Failed to create user";
       throw new Error(errorMessage);
     }
 
     if (!response.ok) {
-      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      const errorMessage =
+        data.error || data.message || `HTTP error! status: ${response.status}`;
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to create user:', error);
+    console.error("Failed to create user:", error);
     throw error;
   }
 }
@@ -282,121 +282,129 @@ export async function updateUser(
     language?: string;
     enabled?: number;
     password?: string;
-  }
+  },
 ): Promise<UpdateUserResponse> {
   try {
     const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    const response = await fetch(`/api/erpnext/users/${encodeURIComponent(userName)}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `/api/erpnext/users/${encodeURIComponent(userName)}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify(userData),
       },
-      credentials: 'include',
-      body: JSON.stringify(userData),
-    });
+    );
 
     const data = await response.json().catch(() => ({
       success: false,
-      message: 'Failed to update user',
-      error: 'Invalid response from server',
+      message: "Failed to update user",
+      error: "Invalid response from server",
     }));
 
     // Check if the response indicates an error (even if status is 200)
     if (data.success === false) {
-      const errorMessage = data.error || data.message || 'Failed to update user';
+      const errorMessage =
+        data.error || data.message || "Failed to update user";
       throw new Error(errorMessage);
     }
 
     if (!response.ok) {
-      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      const errorMessage =
+        data.error || data.message || `HTTP error! status: ${response.status}`;
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to update user:', error);
+    console.error("Failed to update user:", error);
     throw error;
   }
 }
 
 // Delete (disable) a user
 export async function deleteUser(
-  userName: string
+  userName: string,
 ): Promise<DeleteUserResponse> {
   try {
     const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    const response = await fetch(`/api/erpnext/users/${encodeURIComponent(userName)}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+    const response = await fetch(
+      `/api/erpnext/users/${encodeURIComponent(userName)}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
       },
-      credentials: 'include',
-    });
+    );
 
     const data = await response.json().catch(() => ({
       success: false,
-      message: 'Failed to delete user',
-      error: 'Invalid response from server',
+      message: "Failed to delete user",
+      error: "Invalid response from server",
     }));
 
     // Check if the response indicates an error (even if status is 200)
     if (data.success === false) {
-      const errorMessage = data.error || data.message || 'Failed to delete user';
+      const errorMessage =
+        data.error || data.message || "Failed to delete user";
       throw new Error(errorMessage);
     }
 
     if (!response.ok) {
-      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      const errorMessage =
+        data.error || data.message || `HTTP error! status: ${response.status}`;
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to delete user:', error);
+    console.error("Failed to delete user:", error);
     throw error;
   }
 }
 
 // Reset password for another user (requires permissions)
-export async function resetUserPassword(
-  params: {
-    target_user_name: string;
-    new_password: string;
-    logout_all_sessions?: number;
-  }
-): Promise<ResetPasswordResponse> {
+export async function resetUserPassword(params: {
+  target_user_name: string;
+  new_password: string;
+  logout_all_sessions?: number;
+}): Promise<ResetPasswordResponse> {
   try {
     const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    const response = await fetch('/api/erpnext/users/password/reset', {
-      method: 'POST',
+    const response = await fetch("/api/erpnext/users/password/reset", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         target_user_name: params.target_user_name,
         new_password: params.new_password,
@@ -406,52 +414,52 @@ export async function resetUserPassword(
 
     const data = await response.json().catch(() => ({
       success: false,
-      message: 'Failed to reset password',
-      error: 'Invalid response from server',
+      message: "Failed to reset password",
+      error: "Invalid response from server",
     }));
 
     // Check if the response indicates an error (even if status is 200)
     if (data.success === false) {
-      const errorMessage = data.error || data.message || 'Failed to reset password';
+      const errorMessage =
+        data.error || data.message || "Failed to reset password";
       throw new Error(errorMessage);
     }
 
     if (!response.ok) {
-      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      const errorMessage =
+        data.error || data.message || `HTTP error! status: ${response.status}`;
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to reset password:', error);
+    console.error("Failed to reset password:", error);
     throw error;
   }
 }
 
 // Change password for current user
-export async function changePassword(
-  params: {
-    old_password: string;
-    new_password: string;
-    logout_all_sessions?: number;
-  }
-): Promise<ChangePasswordResponse> {
+export async function changePassword(params: {
+  old_password: string;
+  new_password: string;
+  logout_all_sessions?: number;
+}): Promise<ChangePasswordResponse> {
   try {
     const token = await getERPNextToken();
 
     if (!token) {
       throw new Error(
-        'ERPNext authentication token not found. Please login first.'
+        "ERPNext authentication token not found. Please login first.",
       );
     }
 
-    const response = await fetch('/api/erpnext/users/password/change', {
-      method: 'POST',
+    const response = await fetch("/api/erpnext/users/password/change", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      credentials: 'include',
+      credentials: "include",
       body: JSON.stringify({
         old_password: params.old_password,
         new_password: params.new_password,
@@ -461,24 +469,26 @@ export async function changePassword(
 
     const data = await response.json().catch(() => ({
       success: false,
-      message: 'Failed to change password',
-      error: 'Invalid response from server',
+      message: "Failed to change password",
+      error: "Invalid response from server",
     }));
 
     // Check if the response indicates an error (even if status is 200)
     if (data.success === false) {
-      const errorMessage = data.error || data.message || 'Failed to change password';
+      const errorMessage =
+        data.error || data.message || "Failed to change password";
       throw new Error(errorMessage);
     }
 
     if (!response.ok) {
-      const errorMessage = data.error || data.message || `HTTP error! status: ${response.status}`;
+      const errorMessage =
+        data.error || data.message || `HTTP error! status: ${response.status}`;
       throw new Error(errorMessage);
     }
 
     return data;
   } catch (error) {
-    console.error('Failed to change password:', error);
+    console.error("Failed to change password:", error);
     throw error;
   }
 }
