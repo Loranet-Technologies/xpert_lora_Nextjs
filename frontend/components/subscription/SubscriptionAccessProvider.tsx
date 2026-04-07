@@ -19,6 +19,7 @@ import {
 import {
   isProductAccessSuspendedFromSummary,
   isSubscriptionRecoveryPath,
+  sessionUserBypassesSubscriptionEnforcement,
 } from "@/lib/subscription/subscription-enforcement";
 
 const DEV_MODE =
@@ -27,7 +28,10 @@ const DEV_MODE =
 
 type SubscriptionAccessContextValue = {
   summary: DashboardSummaryResponse | undefined;
+  /** True when subscription payment enforcement applies (regular portal users). */
   isProductSuspended: boolean;
+  /** Admin / SuperAdmin — same bypass as Frappe session_user_bypasses_subscription_enforcement. */
+  subscriptionEnforcementBypassed: boolean;
   isLoading: boolean;
   refetchAccess: () => void;
 };
@@ -37,8 +41,13 @@ const SubscriptionAccessContext = createContext<
 >(undefined);
 
 export function SubscriptionAccessProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const queryClient = useQueryClient();
+
+  const subscriptionEnforcementBypassed = useMemo(
+    () => sessionUserBypassesSubscriptionEnforcement(user?.role),
+    [user?.role],
+  );
 
   const enabled =
     isAuthenticated && !authLoading && !DEV_MODE;
@@ -53,8 +62,10 @@ export function SubscriptionAccessProvider({ children }: { children: ReactNode }
 
   const isProductSuspended = useMemo(() => {
     if (DEV_MODE) return false;
-    return isProductAccessSuspendedFromSummary(summaryQuery.data);
-  }, [summaryQuery.data]);
+    return isProductAccessSuspendedFromSummary(summaryQuery.data, {
+      enforcementBypassed: subscriptionEnforcementBypassed,
+    });
+  }, [summaryQuery.data, subscriptionEnforcementBypassed]);
 
   const refetchAccess = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: DASHBOARD_SUMMARY_QUERY_KEY });
@@ -64,6 +75,7 @@ export function SubscriptionAccessProvider({ children }: { children: ReactNode }
     () => ({
       summary: summaryQuery.data,
       isProductSuspended,
+      subscriptionEnforcementBypassed,
       isLoading: enabled ? summaryQuery.isLoading : false,
       refetchAccess,
     }),
@@ -71,6 +83,7 @@ export function SubscriptionAccessProvider({ children }: { children: ReactNode }
       summaryQuery.data,
       summaryQuery.isLoading,
       isProductSuspended,
+      subscriptionEnforcementBypassed,
       enabled,
       refetchAccess,
     ],

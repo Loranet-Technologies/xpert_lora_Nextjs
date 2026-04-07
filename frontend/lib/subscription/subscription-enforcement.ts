@@ -1,6 +1,21 @@
 import type { DashboardSummaryResponse } from "@/lib/api/dashboard/dashboard";
 
 /**
+ * Portal roles that never require an active subscription (matches User.role on ERPNext).
+ * Mirrors session_user_bypasses_subscription_enforcement() — normalize to alnum only:
+ * SuperAdmin, super_admin, Super Admin → superadmin; Admin → admin.
+ */
+export function sessionUserBypassesSubscriptionEnforcement(
+  role: string | null | undefined,
+): boolean {
+  if (!role?.trim()) return false;
+  const normalized = [...role.toLowerCase()]
+    .filter((ch) => /[a-z0-9]/i.test(ch))
+    .join("");
+  return normalized === "superadmin" || normalized === "admin";
+}
+
+/**
  * ERPNext Subscription statuses that grant product access.
  * Mirrors xpert_lora_app.subscription_enforcement.SUBSCRIPTION_ACTIVE_STATUSES.
  */
@@ -31,10 +46,13 @@ export function accountShouldShowSuspended(
 /**
  * True when the customer dashboard indicates the account cannot use paid product features
  * (payment required / subscription not Active or Trialling).
+ * Staff bypass users are never "suspended" here — matches get_dashboard_summary.
  */
 export function isProductAccessSuspendedFromSummary(
   summary: DashboardSummaryResponse | null | undefined,
+  options?: { enforcementBypassed?: boolean },
 ): boolean {
+  if (options?.enforcementBypassed) return false;
   if (!summary || summary.success === false) return false;
   const acct = (summary.account_status || "").trim().toLowerCase();
   if (acct === "suspended") return true;
