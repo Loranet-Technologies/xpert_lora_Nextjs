@@ -42,7 +42,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -59,10 +58,9 @@ function parseDateValue(value: string): Date | undefined {
 }
 
 export default function ActivityLogsPage() {
-  const { user } = useAuth();
-  const currentUserRole = user?.role?.toLowerCase() || "";
-  const canView =
-    currentUserRole === "admin" || currentUserRole === "superadmin";
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const role = user?.role?.toLowerCase() || "";
+  const canFilterByUser = role === "admin" || role === "superadmin";
 
   const [userFilter, setUserFilter] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
@@ -79,6 +77,7 @@ export default function ActivityLogsPage() {
   const { data, isLoading, error, isFetching } = useQuery({
     queryKey: [
       "activity-logs",
+      canFilterByUser,
       userFilter,
       actionFilter,
       statusFilter,
@@ -88,7 +87,10 @@ export default function ActivityLogsPage() {
     ],
     queryFn: () =>
       listActivityLogs({
-        user: userFilter.trim() || undefined,
+        user:
+          canFilterByUser && userFilter.trim()
+            ? userFilter.trim()
+            : undefined,
         action: actionFilter === "all" ? undefined : actionFilter,
         status: statusFilter === "all" ? undefined : statusFilter,
         from: fromDate || undefined,
@@ -96,7 +98,7 @@ export default function ActivityLogsPage() {
         page,
         limit: pageSize,
       }),
-    enabled: canView,
+    enabled: isAuthenticated,
   });
 
   const applyDateFilter = () => {
@@ -120,22 +122,30 @@ export default function ActivityLogsPage() {
   const totalPages = data?.total_pages ?? 1;
   const total = data?.total ?? 0;
 
-  if (!canView) {
+  if (authLoading) {
+    return (
+      <SidebarProvider>
+        <AppSidebar />
+        <SidebarInset>
+          <Header title="Activity logs" />
+          <div className="flex flex-1 items-center justify-center p-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  if (!isAuthenticated) {
     return (
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset>
           <Header title="Activity logs" />
           <div className="flex flex-1 flex-col gap-4 p-6">
-            <Card className="max-w-lg mx-auto mt-12">
-              <CardContent className="pt-6 flex flex-col items-center gap-3 text-center">
-                <ShieldAlert className="h-10 w-10 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  You do not have permission to view user activity logs. Admin
-                  access is required.
-                </p>
-              </CardContent>
-            </Card>
+            <p className="text-sm text-muted-foreground">
+              Please sign in to view activity logs.
+            </p>
           </div>
         </SidebarInset>
       </SidebarProvider>
@@ -162,20 +172,27 @@ export default function ActivityLogsPage() {
             <Card className="border-0 overflow-hidden">
               <CardContent className="p-4 sm:p-6 space-y-4">
                 <div className="flex flex-col lg:flex-row gap-3 flex-wrap items-end">
-                  <div className="grid w-full sm:grid-cols-2 lg:grid-cols-5 gap-3 flex-1">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        User
-                      </label>
-                      <Input
-                        placeholder="Username or email"
-                        value={userFilter}
-                        onChange={(e) => {
-                          setUserFilter(e.target.value);
-                          setPage(1);
-                        }}
-                      />
-                    </div>
+                  <div
+                    className={cn(
+                      "grid w-full sm:grid-cols-2 gap-3 flex-1",
+                      canFilterByUser ? "lg:grid-cols-5" : "lg:grid-cols-4",
+                    )}
+                  >
+                    {canFilterByUser ? (
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          User
+                        </label>
+                        <Input
+                          placeholder="Username or email"
+                          value={userFilter}
+                          onChange={(e) => {
+                            setUserFilter(e.target.value);
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ) : null}
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-muted-foreground">
                         Action

@@ -141,7 +141,7 @@ const navigationItems = [
     icon: ScrollText,
     id: "activityLogs",
     path: "/pages/activity-logs",
-    requiredRole: "admin",
+    requiredRole: undefined, // Available to all authenticated users
   },
   {
     title: "Subscription lifecycle logs",
