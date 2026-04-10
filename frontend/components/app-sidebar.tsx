@@ -155,7 +155,7 @@ const navigationItems = [
     icon: Receipt,
     id: "paymentBillingLogs",
     path: "/pages/payment-billing-logs",
-    requiredRole: "admin", // Admin only
+    requiredRole: undefined, // Admin only
   },
   {
     title: "Merchant Management",
@@ -302,7 +302,9 @@ export function AppSidebar({
               type="button"
             >
               <LogOut className="h-4 w-4" />
-              <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+              <span className="group-data-[collapsible=icon]:hidden">
+                Logout
+              </span>
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
