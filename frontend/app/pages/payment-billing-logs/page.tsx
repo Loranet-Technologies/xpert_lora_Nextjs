@@ -48,7 +48,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
-  FileJson2,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -150,39 +150,6 @@ export default function PaymentBillingLogsPage() {
     setFromDate("");
     setToDate("");
     setPage(1);
-  };
-
-  const openPayload = async (row: PaymentBillingLogRow) => {
-    setPayloadRow(row);
-    setPayloadText(null);
-    setPayloadError(null);
-    setPayloadLoading(true);
-    try {
-      const raw = await getPaymentBillingLogPayload(row, {
-        status: statusFilter === "all" ? undefined : statusFilter,
-        from_date: fromDate || undefined,
-        to_date: toDate || undefined,
-        limit: pageSize,
-        start: (page - 1) * pageSize,
-      });
-      setPayloadText(raw);
-      if (!raw) setPayloadError("No gateway response stored for this row.");
-    } catch (e) {
-      setPayloadError(
-        e instanceof Error ? e.message : "Failed to load response",
-      );
-    } finally {
-      setPayloadLoading(false);
-    }
-  };
-
-  const copyPayload = async () => {
-    if (!payloadText) return;
-    try {
-      await navigator.clipboard.writeText(prettyJson(payloadText));
-    } catch {
-      /* ignore */
-    }
   };
 
   if (authLoading) {
@@ -374,19 +341,22 @@ export default function PaymentBillingLogsPage() {
                         <TableHead>Organization</TableHead>
                         <TableHead>Processed</TableHead>
                         <TableHead className="min-w-[120px]">Error</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">
+                          Actions
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={12} className="text-center py-12">
+                          <TableCell colSpan={13} className="text-center py-12">
                             <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                           </TableCell>
                         </TableRow>
                       ) : rows.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={12}
+                            colSpan={13}
                             className="text-center py-8 text-muted-foreground"
                           >
                             No log entries match the current filters, or you do
@@ -399,6 +369,12 @@ export default function PaymentBillingLogsPage() {
                             row.transaction_id || row.gateway_reference || "—";
                           const processed =
                             row.is_processed === 1 || row.is_processed === true;
+                          const receiptUrl =
+                            row.receipt_download_url?.trim() || "";
+                          const invoiceUrl =
+                            row.invoice_download_url?.trim() || "";
+                          const hasReceipt = Boolean(receiptUrl);
+                          const hasInvoice = Boolean(invoiceUrl);
                           return (
                             <TableRow key={row.name}>
                               <TableCell
@@ -473,6 +449,52 @@ export default function PaymentBillingLogsPage() {
                               >
                                 {row.error_message || "—"}
                               </TableCell>
+                              <TableCell className="text-right">
+                                <div className="inline-flex items-center gap-1.5">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2.5 text-xs font-medium"
+                                    title={
+                                      hasInvoice
+                                        ? "Download Sales Invoice PDF"
+                                        : "Sales Invoice PDF not available for this row"
+                                    }
+                                    disabled={!hasInvoice}
+                                    onClick={() =>
+                                      window.open(
+                                        invoiceUrl,
+                                        "_blank",
+                                        "noopener,noreferrer",
+                                      )
+                                    }
+                                  >
+                                    Sales Invoice
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 px-2.5 text-xs font-medium"
+                                    title={
+                                      hasReceipt
+                                        ? "Download Receipt (Payment Request PDF)"
+                                        : "Receipt PDF not available for this row"
+                                    }
+                                    disabled={!hasReceipt}
+                                    onClick={() =>
+                                      window.open(
+                                        receiptUrl,
+                                        "_blank",
+                                        "noopener,noreferrer",
+                                      )
+                                    }
+                                  >
+                                    Receipt
+                                  </Button>
+                                </div>
+                              </TableCell>
                             </TableRow>
                           );
                         })
@@ -515,61 +537,6 @@ export default function PaymentBillingLogsPage() {
             </Card>
           </div>
         </div>
-
-        <Dialog
-          open={payloadRow !== null}
-          onOpenChange={(open) => {
-            if (!open) {
-              setPayloadRow(null);
-              setPayloadText(null);
-              setPayloadError(null);
-            }
-          }}
-        >
-          <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-            <DialogHeader>
-              <DialogTitle className="flex items-center justify-between gap-2 pr-8">
-                <span>Gateway response</span>
-                {payloadText ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={copyPayload}
-                  >
-                    Copy JSON
-                  </Button>
-                ) : null}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-hidden flex flex-col gap-2">
-              {payloadRow && (
-                <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground font-mono truncate">
-                    {payloadRow.name}
-                    {payloadRow.event_type ? ` · ${payloadRow.event_type}` : ""}
-                  </p>
-                  {payloadRow.error_message ? (
-                    <p className="text-xs text-destructive">
-                      {payloadRow.error_message}
-                    </p>
-                  ) : null}
-                </div>
-              )}
-              {payloadLoading ? (
-                <div className="flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : payloadError ? (
-                <p className="text-sm text-destructive">{payloadError}</p>
-              ) : (
-                <pre className="text-xs font-mono bg-muted/50 rounded-md p-3 overflow-auto max-h-[60vh] whitespace-pre-wrap break-all">
-                  {prettyJson(payloadText) || "—"}
-                </pre>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
       </SidebarInset>
     </SidebarProvider>
   );

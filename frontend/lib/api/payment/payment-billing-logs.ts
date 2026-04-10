@@ -27,6 +27,10 @@ export interface PaymentBillingLogRow {
   reference_doctype?: string | null;
   reference_name?: string | null;
   gateway_response?: string | null;
+  /** Payment Request PDF URL (receipt-like document). */
+  receipt_download_url?: string | null;
+  /** Sales Invoice PDF URL (only when reference is a Sales Invoice). */
+  invoice_download_url?: string | null;
 }
 
 export const PAYMENT_BILLING_STATUSES: PaymentBillingLogStatus[] = [

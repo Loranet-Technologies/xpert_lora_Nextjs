@@ -23,6 +23,7 @@ interface InvoicePrintViewProps {
   invoice: BillingHistoryItem | null;
   organizationName: string;
   planName?: string;
+  documentType?: "Invoice" | "Receipt";
 }
 
 function formatCurrency(amount: number, currency?: string) {
@@ -42,6 +43,7 @@ export function InvoicePrintView({
   invoice,
   organizationName,
   planName,
+  documentType = "Invoice",
 }: InvoicePrintViewProps) {
   if (!invoice) return null;
 
@@ -79,12 +81,12 @@ export function InvoicePrintView({
           }
         }
       `}</style>
-      <div className="invoice-print-root hidden print:block p-6 sm:p-8">
+      <div className="invoice-print-root hidden print:block p-2 sm:p-2">
         <Card className="overflow-hidden border shadow-none print:shadow-none">
           {/* Top accent */}
           <div className="h-1.5 w-full bg-primary" />
           <CardContent className="p-0">
-            <div className="relative p-6 sm:p-10">
+            <div className="relative p-2   sm:p-2">
               {/* Paid watermark */}
               {isPaid && (
                 <div className="absolute top-32 right-8 transform rotate-12 pointer-events-none opacity-20 select-none">
@@ -117,12 +119,12 @@ export function InvoicePrintView({
                 </div>
                 <div className="text-left sm:text-right">
                   <h2 className="text-3xl font-black text-muted-foreground uppercase tracking-tight mb-2">
-                    Invoice
+                    {documentType}
                   </h2>
                   <div className="space-y-1">
                     <div className="flex sm:justify-end gap-3 text-sm">
                       <span className="text-muted-foreground font-medium">
-                        Invoice No:
+                        {documentType} No:
                       </span>
                       <span className="font-bold">{invoice.name}</span>
                     </div>
@@ -286,4 +288,3 @@ export function InvoicePrintView({
     </>
   );
 }
-
