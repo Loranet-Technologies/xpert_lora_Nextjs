@@ -124,9 +124,9 @@ export default function LandingPage() {
             <Button
               variant="ghost"
               className="text-muted-foreground hover:text-primary"
-              onClick={() => scrollTo("user-guide")}
+              asChild
             >
-              User Guide
+              <Link href="/user-guide">User Guide</Link>
             </Button>
           </nav>
           <div className="flex items-center gap-3">
@@ -508,13 +508,12 @@ export default function LandingPage() {
               >
                 Features
               </Button>
-              <Button
-                variant="link"
-                className="justify-start h-auto p-0 text-muted-foreground hover:text-primary"
-                onClick={() => scrollTo("user-guide")}
+              <Link
+                href="/user-guide"
+                className="text-sm text-muted-foreground hover:text-primary"
               >
                 User Guide
-              </Button>
+              </Link>
               <Link
                 href="#"
                 className="text-sm text-muted-foreground hover:text-primary"
