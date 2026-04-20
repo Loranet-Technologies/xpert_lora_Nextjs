@@ -7,6 +7,7 @@ export const mapPathToTab = (pathname: string): string => {
   if (pathname.startsWith("/pages/deviceProfile")) return "deviceProfile";
   if (pathname.startsWith("/pages/devices")) return "devices";
   if (pathname.startsWith("/pages/gateways")) return "gateways";
+  if (pathname.startsWith("/pages/device-list")) return "deviceList";
   if (pathname.startsWith("/pages/subscription-management"))
     return "subscriptionManagement";
   if (pathname.startsWith("/pages/subscription-dashboard"))
@@ -14,7 +15,7 @@ export const mapPathToTab = (pathname: string): string => {
   if (pathname.startsWith("/pages/subscription-lifecycle-logs"))
     return "subscriptionLifecycleLogs";
   if (pathname.startsWith("/pages/subscription")) return "subscription";
-  if (pathname.startsWith("/pages/users")) return "users";
+  if (pathname.startsWith("/pages/users")) return "usersManagement";
   if (pathname.startsWith("/pages/activity-logs")) return "activityLogs";
   if (pathname.startsWith("/pages/payment-billing-logs"))
     return "paymentBillingLogs";

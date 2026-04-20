@@ -194,6 +194,15 @@ export function AppSidebar({
   const activeTab = propActiveTab ?? hookActiveTab;
   const setActiveTab = propSetActiveTab ?? setActiveTabState;
 
+  const isPathActive = React.useCallback(
+    (itemPath: string) => {
+      if (!pathname) return false;
+      if (pathname === "/" && itemPath === "/pages/dashboard") return true;
+      return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+    },
+    [pathname]
+  );
+
   // Update the activeTab based on the current pathname
   useEffect(() => {
     if (pathname) {
@@ -273,7 +282,7 @@ export function AppSidebar({
                           ? "Account on hold — open Subscription to complete payment and restore access."
                           : item.title
                       }
-                      isActive={activeTab === item.id}
+                      isActive={isPathActive(item.path) || activeTab === item.id}
                       disabled={locked}
                       className={locked ? "opacity-50" : undefined}
                       onClick={() => {
