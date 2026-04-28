@@ -113,6 +113,11 @@ export const ERPNEXT_API_URLS = {
   GET_DASHBOARD_SUMMARY: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_dashboard_summary`,
   /** Customer dashboard notifications and alerts. */
   GET_DASHBOARD_NOTIFICATIONS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.get_dashboard_notifications`,
+
+  /** User-defined IoT dashboard (layout + widgets). */
+  CUSTOM_DASHBOARD_GET: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.custom_dashboard.get_dashboard`,
+  CUSTOM_DASHBOARD_SAVE: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.custom_dashboard.save_dashboard`,
+  CUSTOM_DASHBOARD_WIDGET_DATA_BATCH: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.custom_dashboard.get_widget_data_batch`,
   UPDATE_SUBSCRIPTION_STATUS: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.update_subscription_status`,
   VALIDATE_SUBSCRIPTION: `${ERPNext_BASE_URL}/api/method/xpert_lora_app.api.validate_subscription`,
   SUBSCRIPTION_RESOURCE: `${ERPNext_BASE_URL}/api/resource/Subscription`,
