@@ -60,7 +60,7 @@ const navigationItems = [
     title: "Dashboard",
     icon: LayoutDashboard,
     id: "dashboard",
-    path: "/pages/dashboard",
+    path: "/dashboard",
     requiredRole: undefined, // Available to all users
     requiresActiveSubscription: false,
   },
@@ -200,7 +200,7 @@ export function AppSidebar({
       if (pathname === "/" && itemPath === "/pages/dashboard") return true;
       return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
     },
-    [pathname]
+    [pathname],
   );
 
   // Update the activeTab based on the current pathname
@@ -282,7 +282,9 @@ export function AppSidebar({
                           ? "Account on hold — open Subscription to complete payment and restore access."
                           : item.title
                       }
-                      isActive={isPathActive(item.path) || activeTab === item.id}
+                      isActive={
+                        isPathActive(item.path) || activeTab === item.id
+                      }
                       disabled={locked}
                       className={locked ? "opacity-50" : undefined}
                       onClick={() => {

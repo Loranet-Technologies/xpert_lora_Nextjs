@@ -1,5 +1,6 @@
 export const mapPathToTab = (pathname: string): string => {
   if (pathname === "/") return "dashboard";
+  if (pathname.startsWith("/dashboard")) return "dashboard";
   if (pathname.startsWith("/pages/dashboard")) return "dashboard";
   if (pathname.startsWith("/pages/organizations")) return "organizations";
   if (pathname.startsWith("/pages/applications")) return "applications";
